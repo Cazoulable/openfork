@@ -16,13 +16,17 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   Clients                       │
-│            (Web, Desktop, Mobile)               │
+│              React Frontend (Vite)               │
+│   ┌──────────────┐  ┌────────────────────────┐  │
+│   │  Project      │  │  Messaging             │  │
+│   │  Tracking UI  │  │  (Slack-style chat)    │  │
+│   │  (Linear-     │  │  Channels, DMs,        │  │
+│   │   style)      │  │  Threads, Reactions    │  │
+│   └──────────────┘  └────────────────────────┘  │
 └──────────────────┬──────────────────────────────┘
                    │ REST / WebSocket
 ┌──────────────────▼──────────────────────────────┐
-│              API Gateway                        │
-│         (Auth, Routing, CORS)                   │
+│              Rust Backend (Axum)                 │
 ├─────────────────────────────────────────────────┤
 │              Core Platform                      │
 │  ┌──────────┐ ┌──────────┐ ┌───────────────┐   │
@@ -48,6 +52,8 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 
 ## Tech Stack
 
+### Backend
+
 | Layer | Technology |
 |-------|-----------|
 | Language | Rust |
@@ -58,11 +64,23 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 | Cache / Pub/Sub | Redis 7 (via fred) |
 | Auth | JWT + Argon2 password hashing |
 
+### Frontend
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 19 + TypeScript |
+| Build tool | Vite |
+| Styling | Tailwind CSS 4 |
+| State management | Zustand |
+| Routing | React Router |
+| Icons | Lucide React |
+
 ## Getting Started
 
 ### Prerequisites
 
 - Rust 1.92+
+- Node.js 20+
 - Docker and Docker Compose
 
 ### Run locally
@@ -71,14 +89,21 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 # Start Postgres and Redis
 docker compose up -d postgres redis
 
-# Copy and edit the config
+# Copy the config
 cp openfork.example.toml openfork.toml
 
-# Build and run
+# Start the backend (terminal 1)
 cargo run --bin openfork-server
+
+# Start the frontend (terminal 2)
+cd frontend
+npm install
+npm run dev
 ```
 
-The server starts on `http://localhost:8080`.
+Open **http://localhost:3000** to access the app. Register a user and start using OpenFork.
+
+The Vite dev server on port 3000 proxies all API calls (`/auth/*`, `/api/*`) to the Rust backend on port 8080.
 
 ### Run with Docker
 
@@ -86,7 +111,7 @@ The server starts on `http://localhost:8080`.
 docker compose up -d
 ```
 
-### Test the API
+### Test the API directly
 
 ```bash
 # Register a user
@@ -149,15 +174,26 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/channels
 
 ```
 openfork/
-├── core/                   # Auth, storage, module system, event bus
-├── shared/                 # Common types, errors
-├── proto/                  # Protobuf definitions for gRPC
-├── migrations/             # All SQL migrations
+├── core/                       # Auth, storage, module system, event bus
+├── shared/                     # Common types, errors
+├── proto/                      # Protobuf definitions for gRPC
+├── migrations/                 # All SQL migrations
 ├── modules/
-│   ├── messaging/          # Slack-like module
-│   └── project-tracking/   # Linear-like module
-├── server/                 # Binary + integration tests
-└── docs/                   # Design docs and plans
+│   ├── messaging/              # Slack-like backend module
+│   └── project-tracking/       # Linear-like backend module
+├── server/                     # Server binary + integration tests
+├── frontend/                   # React SPA
+│   └── src/
+│       ├── api/                # API client layer (fetch + JWT)
+│       ├── stores/             # Zustand state stores
+│       ├── hooks/              # Custom hooks (auth, WebSocket)
+│       └── components/
+│           ├── ui/             # Shared UI components
+│           ├── layout/         # App shell, sidebar, top bar
+│           ├── auth/           # Login, register pages
+│           ├── projects/       # Project tracking pages
+│           └── messaging/      # Messaging pages
+└── docs/                       # Design docs and plans
 ```
 
 ## Per-Module Storage
