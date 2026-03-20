@@ -2,6 +2,7 @@ use super::context::ModuleContext;
 use super::traits::Module;
 use crate::auth::JwtManager;
 use crate::config::AppConfig;
+use crate::events::EventBus;
 use crate::storage::{factory, CacheStore, RelationalStore};
 use axum::Router;
 use std::sync::Arc;
@@ -28,6 +29,7 @@ impl ModuleRegistry {
         default_db: &RelationalStore,
         default_cache: &CacheStore,
         jwt: Arc<JwtManager>,
+        events: Arc<EventBus>,
     ) -> anyhow::Result<()> {
         for module in &mut self.modules {
             let reqs = module.storage_requirements();
@@ -59,6 +61,7 @@ impl ModuleRegistry {
                 db,
                 cache,
                 jwt: jwt.clone(),
+                events: events.clone(),
             };
 
             module.init(ctx)?;
