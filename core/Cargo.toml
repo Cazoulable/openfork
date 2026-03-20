@@ -1,0 +1,24 @@
+[package]
+name = "openfork-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openfork-shared = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tonic = { workspace = true }
+sqlx = { workspace = true }
+fred = { workspace = true }
+jsonwebtoken = { workspace = true }
+argon2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+toml = { workspace = true }

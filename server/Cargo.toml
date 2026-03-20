@@ -1,0 +1,15 @@
+[package]
+name = "openfork-server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openfork-shared = { workspace = true }
+openfork-core = { workspace = true }
+openfork-proto = { workspace = true }
+openfork-mod-project-tracking = { workspace = true }
+openfork-mod-messaging = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
