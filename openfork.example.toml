@@ -1,0 +1,19 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[auth]
+jwt_secret = "CHANGE-ME-in-production"
+token_expiry_seconds = 900
+refresh_expiry_seconds = 604800
+
+[storage.default]
+url = "postgres://openfork:openfork@localhost:5432/openfork"
+max_connections = 10
+
+[storage.cache]
+url = "redis://localhost:6379"
+
+# Per-module storage overrides (optional)
+# [modules.messaging.storage]
+# url = "postgres://openfork:openfork@other-host:5432/messaging"
