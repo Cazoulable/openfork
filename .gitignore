@@ -3,3 +3,5 @@
 *.swo
 .env
 openfork.toml
+frontend/node_modules
+frontend/dist

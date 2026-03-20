@@ -1,0 +1,90 @@
+// ---------------------------------------------------------------------------
+// useAuth — convenience hook that wires API calls, token management, and
+// the Zustand auth store together.
+// ---------------------------------------------------------------------------
+
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { setTokens, clearTokens } from "../api/client";
+import * as authApi from "../api/auth";
+import { useAuthStore } from "../stores/auth";
+import type { AuthUser } from "../stores/auth";
+
+export interface UseAuthReturn {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    displayName: string,
+    password: string,
+  ) => Promise<void>;
+  logout: () => void;
+  clearError: () => void;
+}
+
+export function useAuth(): UseAuthReturn {
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setUser = useAuthStore((s) => s.setUser);
+  const storeLogout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = useCallback(() => setError(null), []);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await authApi.login(email, password);
+        setTokens(res.access_token, res.refresh_token);
+        setUser(res.user);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Login failed");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setUser],
+  );
+
+  const register = useCallback(
+    async (email: string, displayName: string, password: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await authApi.register(email, displayName, password);
+        setTokens(res.access_token, res.refresh_token);
+        setUser(res.user);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Registration failed");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setUser],
+  );
+
+  const logout = useCallback(() => {
+    clearTokens();
+    storeLogout();
+    navigate("/login");
+  }, [storeLogout, navigate]);
+
+  return {
+    user,
+    isAuthenticated,
+    isLoading,
+    error,
+    login,
+    register,
+    logout,
+    clearError,
+  };
+}

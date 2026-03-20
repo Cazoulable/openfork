@@ -27,8 +27,8 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 │              Core Platform                      │
 │  ┌──────────┐ ┌──────────┐ ┌───────────────┐   │
 │  │   Auth   │ │  Event   │ │   Storage     │   │
-│  │ (OAuth2/ │ │   Bus    │ │  Abstraction  │   │
-│  │  OIDC)   │ │ (Redis)  │ │ (Postgres/    │   │
+│  │  (JWT /  │ │   Bus    │ │  Abstraction  │   │
+│  │ Argon2)  │ │ (Redis)  │ │ (Postgres/    │   │
 │  └──────────┘ └──────────┘ │  Redis/...)   │   │
 │                             └───────────────┘   │
 ├────────────┬────────────┬───────────────────────┤
@@ -37,17 +37,14 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 │  (Slack)   │  Tracking  │                       │
 │            │  (Linear)  │                       │
 └────────────┴────────────┴───────────────────────┘
-         gRPC (inter-module communication)
 ```
 
-## MVP Modules
+## Modules
 
 | Module | Description | Status |
 |--------|-------------|--------|
-| **Project Tracking** | Issues, boards, sprints (Linear-like) | In development |
-| **Messaging** | Channels, DMs, threads, presence (Slack-like) | In development |
-
-See [docs/modules.md](docs/modules.md) for the full module roadmap.
+| **Project Tracking** | Workspaces, projects, issues, labels, comments | MVP complete |
+| **Messaging** | Channels, DMs, threads, reactions, WebSocket, presence, full-text search | MVP complete |
 
 ## Tech Stack
 
@@ -55,11 +52,11 @@ See [docs/modules.md](docs/modules.md) for the full module roadmap.
 |-------|-----------|
 | Language | Rust |
 | Async runtime | Tokio |
-| HTTP | Axum |
+| HTTP / WebSocket | Axum 0.8 |
 | gRPC | Tonic + Prost |
-| Database | PostgreSQL (via SQLx) |
-| Cache / Pub/Sub | Redis |
-| Auth | JWT (OAuth2/OIDC) |
+| Database | PostgreSQL 17 (via SQLx) |
+| Cache / Pub/Sub | Redis 7 (via fred) |
+| Auth | JWT + Argon2 password hashing |
 
 ## Getting Started
 
@@ -67,13 +64,12 @@ See [docs/modules.md](docs/modules.md) for the full module roadmap.
 
 - Rust 1.92+
 - Docker and Docker Compose
-- protoc (Protocol Buffers compiler)
 
 ### Run locally
 
 ```bash
 # Start Postgres and Redis
-docker compose up -d
+docker compose up -d postgres redis
 
 # Copy and edit the config
 cp openfork.example.toml openfork.toml
@@ -82,19 +78,85 @@ cp openfork.example.toml openfork.toml
 cargo run --bin openfork-server
 ```
 
-The server will start on `http://localhost:8080`.
+The server starts on `http://localhost:8080`.
+
+### Run with Docker
+
+```bash
+docker compose up -d
+```
+
+### Test the API
+
+```bash
+# Register a user
+curl -s -X POST http://localhost:8080/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@example.com","display_name":"Test User","password":"password123"}'
+
+# Login
+curl -s -X POST http://localhost:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# Use the access_token for authenticated endpoints
+TOKEN="<access_token from above>"
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/channels
+```
+
+## API Endpoints
+
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/register` | Register a new user |
+| POST | `/auth/login` | Login |
+| POST | `/auth/refresh` | Refresh access token |
+
+### Project Tracking
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST/GET | `/api/workspaces` | Create / list workspaces |
+| GET | `/api/workspaces/:id` | Get workspace |
+| POST/GET | `/api/projects` | Create / list projects |
+| GET/PUT/DELETE | `/api/projects/:id` | Get / update / delete project |
+| POST/GET | `/api/projects/:id/issues` | Create / list issues (with filters) |
+| GET/PUT/DELETE | `/api/issues/:id` | Get / update / delete issue |
+| POST/GET | `/api/issues/:id/comments` | Create / list comments |
+| PUT/DELETE | `/api/comments/:id` | Update / delete comment |
+| POST/GET | `/api/projects/:id/labels` | Create / list labels |
+| PUT | `/api/issues/:id/labels` | Set labels on issue |
+
+### Messaging
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST/GET | `/api/channels` | Create / list channels |
+| GET/PUT/DELETE | `/api/channels/:id` | Get / update / delete channel |
+| POST | `/api/channels/:id/join` | Join channel |
+| POST | `/api/channels/:id/leave` | Leave channel |
+| POST/GET | `/api/channels/:id/messages` | Send / list messages |
+| GET | `/api/messages/:id/thread` | Get thread |
+| PUT/DELETE | `/api/messages/:id` | Update / delete message |
+| POST | `/api/messages/:id/reactions` | Add reaction |
+| DELETE | `/api/messages/:id/reactions/:emoji` | Remove reaction |
+| POST/GET | `/api/dm` | Create / list DM groups |
+| POST/GET | `/api/dm/:id/messages` | Send / list DMs |
+| GET | `/api/messages/search?q=...` | Full-text message search |
+| GET | `/api/ws?token=...` | WebSocket connection |
+| GET | `/api/presence/:user_id` | Get user presence |
 
 ## Project Structure
 
 ```
 openfork/
-├── core/                   # Auth, storage abstraction, module system, API gateway
-├── shared/                 # Common types, errors, utilities
+├── core/                   # Auth, storage, module system, event bus
+├── shared/                 # Common types, errors
 ├── proto/                  # Protobuf definitions for gRPC
+├── migrations/             # All SQL migrations
 ├── modules/
 │   ├── messaging/          # Slack-like module
 │   └── project-tracking/   # Linear-like module
-├── server/                 # Binary that wires everything together
+├── server/                 # Binary + integration tests
 └── docs/                   # Design docs and plans
 ```
 
