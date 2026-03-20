@@ -15,5 +15,20 @@ services:
     ports:
       - "6379:6379"
 
+  server:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      OPENFORK_CONFIG: /etc/openfork/openfork.toml
+      OPENFORK_STORAGE_DEFAULT_URL: postgres://openfork:openfork@postgres:5432/openfork
+      OPENFORK_STORAGE_CACHE_URL: redis://redis:6379
+      OPENFORK_AUTH_JWT_SECRET: change-me-in-production
+    volumes:
+      - ./openfork.example.toml:/etc/openfork/openfork.toml:ro
+    depends_on:
+      - postgres
+      - redis
+
 volumes:
   pgdata:
