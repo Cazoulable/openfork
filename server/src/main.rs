@@ -10,6 +10,8 @@ use openfork_core::{
     module::ModuleRegistry,
     storage::factory,
 };
+use openfork_mod_project_tracking::ProjectTrackingModule;
+use openfork_mod_messaging::MessagingModule;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,6 +36,15 @@ async fn main() -> Result<()> {
         .await?;
     info!("Core migrations applied");
 
+    // Run module migrations
+    sqlx::migrate!("../modules/project-tracking/migrations")
+        .run(default_db.pool())
+        .await?;
+    sqlx::migrate!("../modules/messaging/migrations")
+        .run(default_db.pool())
+        .await?;
+    info!("Module migrations applied");
+
     // Auth
     let jwt = Arc::new(JwtManager::new(
         &config.auth.jwt_secret,
@@ -48,10 +59,8 @@ async fn main() -> Result<()> {
 
     // Module registry
     let mut registry = ModuleRegistry::new();
-
-    // Register modules here:
-    // registry.register(Box::new(ProjectTrackingModule::new()));
-    // registry.register(Box::new(MessagingModule::new()));
+    registry.register(Box::new(ProjectTrackingModule::new()));
+    registry.register(Box::new(MessagingModule::new()));
 
     registry.init_all(&config, &default_db, &default_cache, jwt.clone(), event_bus.clone()).await?;
 
