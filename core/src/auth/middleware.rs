@@ -1,5 +1,5 @@
 use axum::{
-    extract::{FromRef, FromRequestParts},
+    extract::FromRequestParts,
     http::{header::AUTHORIZATION, request::Parts, StatusCode},
     response::{IntoResponse, Json},
 };
@@ -9,18 +9,22 @@ use std::sync::Arc;
 use super::jwt::{Claims, JwtManager, TokenType};
 
 /// Extractor that validates the JWT and provides the authenticated user's claims.
+/// Requires `Arc<JwtManager>` to be present as an Axum Extension.
 #[derive(Debug, Clone)]
 pub struct AuthUser(pub Claims);
 
 impl<S> FromRequestParts<S> for AuthUser
 where
     S: Send + Sync,
-    Arc<JwtManager>: FromRef<S>,
 {
     type Rejection = AuthError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let jwt_manager = Arc::<JwtManager>::from_ref(state);
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let jwt_manager = parts
+            .extensions
+            .get::<Arc<JwtManager>>()
+            .cloned()
+            .ok_or(AuthError::MissingToken)?;
 
         let header = parts
             .headers
