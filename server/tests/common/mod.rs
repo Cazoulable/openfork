@@ -70,18 +70,10 @@ impl TestServer {
             .expect("Failed to connect to Redis");
 
         // Run migrations
-        sqlx::migrate!("../core/migrations")
+        sqlx::migrate!("../migrations")
             .run(default_db.pool())
             .await
-            .expect("Failed to run core migrations");
-        sqlx::migrate!("../modules/project-tracking/migrations")
-            .run(default_db.pool())
-            .await
-            .expect("Failed to run project-tracking migrations");
-        sqlx::migrate!("../modules/messaging/migrations")
-            .run(default_db.pool())
-            .await
-            .expect("Failed to run messaging migrations");
+            .expect("Failed to run migrations");
 
         // Auth
         let jwt = Arc::new(JwtManager::new(

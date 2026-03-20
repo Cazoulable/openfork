@@ -30,20 +30,11 @@ async fn main() -> Result<()> {
     let default_cache = factory::create_cache_store(&config.storage.cache).await?;
     info!("Storage connected");
 
-    // Run core migrations
-    sqlx::migrate!("../core/migrations")
+    // Run all migrations
+    sqlx::migrate!("../migrations")
         .run(default_db.pool())
         .await?;
-    info!("Core migrations applied");
-
-    // Run module migrations
-    sqlx::migrate!("../modules/project-tracking/migrations")
-        .run(default_db.pool())
-        .await?;
-    sqlx::migrate!("../modules/messaging/migrations")
-        .run(default_db.pool())
-        .await?;
-    info!("Module migrations applied");
+    info!("Migrations applied");
 
     // Auth
     let jwt = Arc::new(JwtManager::new(
