@@ -12,6 +12,11 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
 
   if (user) {
+    const joinRedirect = localStorage.getItem('openfork_join_redirect');
+    if (joinRedirect) {
+      localStorage.removeItem('openfork_join_redirect');
+      return <Navigate to={joinRedirect} replace />;
+    }
     return <Navigate to="/" replace />;
   }
 

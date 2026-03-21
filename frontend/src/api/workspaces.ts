@@ -44,6 +44,24 @@ export interface InviteMemberPayload {
   role?: WorkspaceRole;
 }
 
+export interface WorkspaceInvite {
+  id: string;
+  workspace_id: string;
+  code: string;
+  created_by: string;
+  role: WorkspaceRole;
+  max_uses: number | null;
+  use_count: number;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface CreateInvitePayload {
+  role?: 'admin' | 'member';
+  max_uses?: number;
+  expires_in_hours?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Helper to throw on non-OK responses
 // ---------------------------------------------------------------------------
@@ -135,4 +153,46 @@ export async function removeMember(
     { method: "DELETE" },
   );
   return unwrapVoid(res);
+}
+
+// ---------------------------------------------------------------------------
+// Invite Links
+// ---------------------------------------------------------------------------
+
+export async function createInvite(
+  workspaceId: string,
+  payload: CreateInvitePayload,
+): Promise<WorkspaceInvite> {
+  const res = await apiFetch(`/api/workspaces/${workspaceId}/invites`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return unwrap<WorkspaceInvite>(res);
+}
+
+export async function listInvites(
+  workspaceId: string,
+): Promise<WorkspaceInvite[]> {
+  const res = await apiFetch(`/api/workspaces/${workspaceId}/invites`);
+  return unwrap<WorkspaceInvite[]>(res);
+}
+
+export async function deleteInvite(
+  workspaceId: string,
+  inviteId: string,
+): Promise<void> {
+  const res = await apiFetch(
+    `/api/workspaces/${workspaceId}/invites/${inviteId}`,
+    { method: "DELETE" },
+  );
+  return unwrapVoid(res);
+}
+
+export async function joinViaInvite(
+  code: string,
+): Promise<WorkspaceWithRole> {
+  const res = await apiFetch(`/api/invites/${code}/join`, {
+    method: "POST",
+  });
+  return unwrap<WorkspaceWithRole>(res);
 }

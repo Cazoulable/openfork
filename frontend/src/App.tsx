@@ -7,6 +7,7 @@ import { RegisterPage } from './components/auth/RegisterPage';
 import { AppShell } from './components/layout/AppShell';
 import { WorkspaceSelectPage } from './components/workspace/WorkspaceSelectPage';
 import { WorkspaceSettingsPage } from './components/workspace/WorkspaceSettingsPage';
+import { JoinWorkspacePage } from './components/workspace/JoinWorkspacePage';
 import { ProjectsPage } from './components/projects/ProjectsPage';
 import { ProjectDetailPage } from './components/projects/ProjectDetailPage';
 import { IssueDetailPage } from './components/projects/IssueDetailPage';
@@ -37,6 +38,7 @@ function App() {
       {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/join/:code" element={<JoinWorkspacePage />} />
 
       {/* Protected: workspace selection (standalone layout, no AppShell) */}
       <Route

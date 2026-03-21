@@ -14,5 +14,9 @@ pub fn workspace_routes(state: Arc<WorkspaceState>) -> Router {
         .route("/api/workspaces/{id}/members", get(handlers::list_members))
         .route("/api/workspaces/{id}/members", post(handlers::invite_member))
         .route("/api/workspaces/{id}/members/{user_id}", delete(handlers::remove_member))
+        .route("/api/workspaces/{id}/invites", post(handlers::create_invite))
+        .route("/api/workspaces/{id}/invites", get(handlers::list_invites))
+        .route("/api/workspaces/{id}/invites/{invite_id}", delete(handlers::delete_invite))
+        .route("/api/invites/{code}/join", post(handlers::use_invite))
         .with_state(state)
 }
