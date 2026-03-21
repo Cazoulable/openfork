@@ -105,6 +105,14 @@ Open **http://localhost:3000** to access the app. Register a user and start usin
 
 The Vite dev server on port 3000 proxies all API calls (`/auth/*`, `/api/*`) to the Rust backend on port 8080.
 
+### Troubleshooting
+
+**`Error: Address already in use (os error 48)`** — a previous server process is still running on port 8080. Kill it:
+
+```bash
+lsof -ti:8080 | xargs kill -9
+```
+
 ### Run with Docker
 
 ```bash
