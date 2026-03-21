@@ -222,7 +222,7 @@ export function ChannelDetailPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // User name map (simple: use sender_id for now since we don't have a user API)
+  // User name map (simple: use author_id for now since we don't have a user API)
   const [userNames] = useState<Record<string, string>>({});
 
   // Scroll ref
@@ -262,11 +262,11 @@ export function ChannelDetailPage() {
     if (!id) return;
     try {
       const data = await api.listMessages(id, { limit: 50 });
-      setMessages(data.messages);
+      setMessages(data);
 
       // Compute reply counts from thread_id references
       const counts: Record<string, number> = {};
-      for (const m of data.messages) {
+      for (const m of data) {
         if (m.thread_id) {
           counts[m.thread_id] = (counts[m.thread_id] || 0) + 1;
         }
@@ -514,7 +514,7 @@ export function ChannelDetailPage() {
                   <MessageBubble
                     key={msg.id}
                     message={msg}
-                    senderName={resolveName(msg.sender_id)}
+                    senderName={resolveName(msg.author_id)}
                     reactions={reactions[msg.id] || []}
                     replyCount={replyCounts[msg.id] || 0}
                     currentUserId={currentUserId}
@@ -541,7 +541,7 @@ export function ChannelDetailPage() {
         {threadParent && id && (
           <ThreadPanel
             parentMessage={threadParent}
-            parentSenderName={resolveName(threadParent.sender_id)}
+            parentSenderName={resolveName(threadParent.author_id)}
             parentReactions={reactions[threadParent.id] || []}
             channelId={id}
             currentUserId={currentUserId}

@@ -119,7 +119,7 @@ export function ThreadPanel({
               <MessageBubble
                 key={r.id}
                 message={r}
-                senderName={resolveName(r.sender_id)}
+                senderName={resolveName(r.author_id)}
                 reactions={allReactions[r.id] || []}
                 currentUserId={currentUserId}
                 onReact={onReact}

@@ -28,7 +28,7 @@ export function IssueRow({ issue, userNames }: IssueRowProps) {
     >
       {/* Identifier */}
       <span className="w-24 shrink-0 text-xs font-mono text-text-muted">
-        {issue.identifier}
+        {issue.issue_number}
       </span>
 
       {/* Title */}

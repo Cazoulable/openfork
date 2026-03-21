@@ -12,18 +12,18 @@ import { apiFetch } from "./client";
 
 export interface Channel {
   id: string;
-  workspace_id: string;
   name: string;
+  slug: string;
   description: string | null;
   is_private: boolean;
-  created_by: string;
+  creator_id: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateChannelPayload {
-  workspace_id: string;
   name: string;
+  slug: string;
   description?: string;
   is_private?: boolean;
 }
@@ -31,7 +31,6 @@ export interface CreateChannelPayload {
 export interface UpdateChannelPayload {
   name?: string;
   description?: string;
-  is_private?: boolean;
 }
 
 // Messages --------------------------------------------------------------------
@@ -39,9 +38,9 @@ export interface UpdateChannelPayload {
 export interface Message {
   id: string;
   channel_id: string;
-  sender_id: string;
-  body: string;
+  author_id: string;
   thread_id: string | null;
+  body: string;
   created_at: string;
   updated_at: string;
 }
@@ -53,11 +52,6 @@ export interface SendMessagePayload {
 
 export interface UpdateMessagePayload {
   body: string;
-}
-
-export interface PaginatedMessages {
-  messages: Message[];
-  has_more: boolean;
 }
 
 // Reactions -------------------------------------------------------------------
@@ -74,30 +68,16 @@ export interface Reaction {
 
 export interface DmGroup {
   id: string;
-  participant_ids: string[];
   created_at: string;
-  updated_at: string;
 }
 
 export interface DmMessage {
   id: string;
   group_id: string;
-  sender_id: string;
+  author_id: string;
   body: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface PaginatedDms {
-  messages: DmMessage[];
-  has_more: boolean;
-}
-
-// Search ----------------------------------------------------------------------
-
-export interface SearchResult {
-  messages: Message[];
-  total: number;
 }
 
 // Presence --------------------------------------------------------------------
@@ -107,7 +87,6 @@ export type PresenceStatus = "online" | "away" | "offline";
 export interface UserPresence {
   user_id: string;
   status: PresenceStatus;
-  last_seen: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -147,8 +126,8 @@ export async function createChannel(
   return unwrap<Channel>(res);
 }
 
-export async function listChannels(workspaceId: string): Promise<Channel[]> {
-  const res = await apiFetch(`/api/channels?workspace_id=${workspaceId}`);
+export async function listChannels(): Promise<Channel[]> {
+  const res = await apiFetch("/api/channels");
   return unwrap<Channel[]>(res);
 }
 
@@ -162,7 +141,7 @@ export async function updateChannel(
   payload: UpdateChannelPayload,
 ): Promise<Channel> {
   const res = await apiFetch(`/api/channels/${channelId}`, {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify(payload),
   });
   return unwrap<Channel>(res);
@@ -201,25 +180,24 @@ export async function sendMessage(
 }
 
 export interface ListMessagesOptions {
-  before?: string;
-  after?: string;
+  offset?: number;
   limit?: number;
 }
 
 export async function listMessages(
   channelId: string,
   options?: ListMessagesOptions,
-): Promise<PaginatedMessages> {
+): Promise<Message[]> {
   const params = new URLSearchParams();
-  if (options?.before) params.set("before", options.before);
-  if (options?.after) params.set("after", options.after);
+  if (options?.offset !== undefined)
+    params.set("offset", String(options.offset));
   if (options?.limit !== undefined)
     params.set("limit", String(options.limit));
 
   const qs = params.toString();
-  const path = `/channels/${channelId}/messages${qs ? `?${qs}` : ""}`;
+  const path = `/api/channels/${channelId}/messages${qs ? `?${qs}` : ""}`;
   const res = await apiFetch(path);
-  return unwrap<PaginatedMessages>(res);
+  return unwrap<Message[]>(res);
 }
 
 export async function getThread(messageId: string): Promise<Message[]> {
@@ -232,7 +210,7 @@ export async function updateMessage(
   payload: UpdateMessagePayload,
 ): Promise<Message> {
   const res = await apiFetch(`/api/messages/${messageId}`, {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify(payload),
   });
   return unwrap<Message>(res);
@@ -262,10 +240,10 @@ export async function removeReaction(
   messageId: string,
   emoji: string,
 ): Promise<void> {
-  const res = await apiFetch(`/api/messages/${messageId}/reactions`, {
-    method: "DELETE",
-    body: JSON.stringify({ emoji }),
-  });
+  const res = await apiFetch(
+    `/api/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+    { method: "DELETE" },
+  );
   return unwrapVoid(res);
 }
 
@@ -298,25 +276,24 @@ export async function sendDm(
 }
 
 export interface ListDmsOptions {
-  before?: string;
-  after?: string;
+  offset?: number;
   limit?: number;
 }
 
 export async function listDms(
   groupId: string,
   options?: ListDmsOptions,
-): Promise<PaginatedDms> {
+): Promise<DmMessage[]> {
   const params = new URLSearchParams();
-  if (options?.before) params.set("before", options.before);
-  if (options?.after) params.set("after", options.after);
+  if (options?.offset !== undefined)
+    params.set("offset", String(options.offset));
   if (options?.limit !== undefined)
     params.set("limit", String(options.limit));
 
   const qs = params.toString();
-  const path = `/dm-groups/${groupId}/messages${qs ? `?${qs}` : ""}`;
+  const path = `/api/dm/${groupId}/messages${qs ? `?${qs}` : ""}`;
   const res = await apiFetch(path);
-  return unwrap<PaginatedDms>(res);
+  return unwrap<DmMessage[]>(res);
 }
 
 // ---------------------------------------------------------------------------
@@ -327,13 +304,13 @@ export async function searchMessages(
   query: string,
   offset?: number,
   limit?: number,
-): Promise<SearchResult> {
+): Promise<Message[]> {
   const params = new URLSearchParams({ q: query });
   if (offset !== undefined) params.set("offset", String(offset));
   if (limit !== undefined) params.set("limit", String(limit));
 
   const res = await apiFetch(`/api/messages/search?${params.toString()}`);
-  return unwrap<SearchResult>(res);
+  return unwrap<Message[]>(res);
 }
 
 // ---------------------------------------------------------------------------

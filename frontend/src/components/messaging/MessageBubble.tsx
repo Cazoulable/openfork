@@ -30,7 +30,7 @@ const PRESET_EMOJIS = [
 
 interface MessageBubbleProps {
   message: Message;
-  /** Display name for the sender. Falls back to sender_id if not resolved. */
+  /** Display name for the sender. Falls back to author_id if not resolved. */
   senderName: string;
   reactions: Reaction[];
   replyCount?: number;
@@ -90,7 +90,7 @@ export function MessageBubble({
   const [editing, setEditing] = useState(false);
   const [editBody, setEditBody] = useState(message.body);
 
-  const isOwn = message.sender_id === currentUserId;
+  const isOwn = message.author_id === currentUserId;
   const wasEdited = message.updated_at !== message.created_at;
 
   const handleToggleReaction = useCallback(

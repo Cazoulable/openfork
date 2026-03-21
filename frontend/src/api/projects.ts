@@ -14,7 +14,6 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
-  owner_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -30,16 +29,17 @@ export interface Project {
   id: string;
   workspace_id: string;
   name: string;
+  slug: string;
   description: string | null;
-  prefix: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateProjectPayload {
+  workspace_id: string;
   name: string;
+  slug: string;
   description?: string;
-  prefix: string;
 }
 
 export interface UpdateProjectPayload {
@@ -61,7 +61,7 @@ export interface Issue {
   priority: IssuePriority;
   assignee_id: string | null;
   creator_id: string;
-  identifier: string;
+  issue_number: number;
   created_at: string;
   updated_at: string;
 }
@@ -114,12 +114,11 @@ export interface Label {
   project_id: string;
   name: string;
   color: string;
-  created_at: string;
 }
 
 export interface CreateLabelPayload {
   name: string;
-  color: string;
+  color?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,54 +162,40 @@ export async function getWorkspace(workspaceId: string): Promise<Workspace> {
 // ---------------------------------------------------------------------------
 
 export async function createProject(
-  workspaceId: string,
   payload: CreateProjectPayload,
 ): Promise<Project> {
-  const res = await apiFetch(`/api/workspaces/${workspaceId}/projects`, {
+  const res = await apiFetch("/api/projects", {
     method: "POST",
     body: JSON.stringify(payload),
   });
   return unwrap<Project>(res);
 }
 
-export async function listProjects(workspaceId: string): Promise<Project[]> {
-  const res = await apiFetch(`/api/workspaces/${workspaceId}/projects`);
+export async function listProjects(): Promise<Project[]> {
+  const res = await apiFetch("/api/projects");
   return unwrap<Project[]>(res);
 }
 
-export async function getProject(
-  workspaceId: string,
-  projectId: string,
-): Promise<Project> {
-  const res = await apiFetch(
-    `/workspaces/${workspaceId}/projects/${projectId}`,
-  );
+export async function getProject(projectId: string): Promise<Project> {
+  const res = await apiFetch(`/api/projects/${projectId}`);
   return unwrap<Project>(res);
 }
 
 export async function updateProject(
-  workspaceId: string,
   projectId: string,
   payload: UpdateProjectPayload,
 ): Promise<Project> {
-  const res = await apiFetch(
-    `/workspaces/${workspaceId}/projects/${projectId}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    },
-  );
+  const res = await apiFetch(`/api/projects/${projectId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
   return unwrap<Project>(res);
 }
 
-export async function deleteProject(
-  workspaceId: string,
-  projectId: string,
-): Promise<void> {
-  const res = await apiFetch(
-    `/workspaces/${workspaceId}/projects/${projectId}`,
-    { method: "DELETE" },
-  );
+export async function deleteProject(projectId: string): Promise<void> {
+  const res = await apiFetch(`/api/projects/${projectId}`, {
+    method: "DELETE",
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error((err as { message?: string }).message ?? "Delete failed");
@@ -242,36 +227,29 @@ export async function listIssues(
   if (filters?.assignee_id) params.set("assignee_id", filters.assignee_id);
 
   const qs = params.toString();
-  const path = `/projects/${projectId}/issues${qs ? `?${qs}` : ""}`;
+  const path = `/api/projects/${projectId}/issues${qs ? `?${qs}` : ""}`;
   const res = await apiFetch(path);
   return unwrap<Issue[]>(res);
 }
 
-export async function getIssue(
-  projectId: string,
-  issueId: string,
-): Promise<Issue> {
-  const res = await apiFetch(`/api/projects/${projectId}/issues/${issueId}`);
+export async function getIssue(issueId: string): Promise<Issue> {
+  const res = await apiFetch(`/api/issues/${issueId}`);
   return unwrap<Issue>(res);
 }
 
 export async function updateIssue(
-  projectId: string,
   issueId: string,
   payload: UpdateIssuePayload,
 ): Promise<Issue> {
-  const res = await apiFetch(`/api/projects/${projectId}/issues/${issueId}`, {
-    method: "PATCH",
+  const res = await apiFetch(`/api/issues/${issueId}`, {
+    method: "PUT",
     body: JSON.stringify(payload),
   });
   return unwrap<Issue>(res);
 }
 
-export async function deleteIssue(
-  projectId: string,
-  issueId: string,
-): Promise<void> {
-  const res = await apiFetch(`/api/projects/${projectId}/issues/${issueId}`, {
+export async function deleteIssue(issueId: string): Promise<void> {
+  const res = await apiFetch(`/api/issues/${issueId}`, {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -305,7 +283,7 @@ export async function updateComment(
   payload: UpdateCommentPayload,
 ): Promise<Comment> {
   const res = await apiFetch(`/api/comments/${commentId}`, {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify(payload),
   });
   return unwrap<Comment>(res);
@@ -342,7 +320,7 @@ export async function listLabels(projectId: string): Promise<Label[]> {
 /**
  * Replace all labels on an issue with the supplied set of label IDs.
  *
- * PUT /issues/:issueId/labels
+ * PUT /api/issues/:issueId/labels
  */
 export async function setIssueLabels(
   issueId: string,

@@ -147,7 +147,7 @@ export function DmDetailPage() {
     if (!id) return;
     try {
       const data = await api.listDms(id, { limit: 50 });
-      setMessages(data.messages);
+      setMessages(data);
     } catch (err) {
       console.error('Failed to load DMs:', err);
     }
@@ -207,12 +207,10 @@ export function DmDetailPage() {
     [currentUserId, user],
   );
 
-  // Build title from participant names
+  // Build title from group id
   const buildTitle = () => {
     if (!group) return 'Direct Message';
-    const others = group.participant_ids.filter((pid) => pid !== currentUserId);
-    if (others.length === 0) return 'You (self)';
-    return others.map((id) => `User ${id.slice(0, 8)}`).join(', ');
+    return `Conversation ${group.id.slice(0, 8)}`;
   };
 
   // ---------------------------------------------------------------------------
@@ -240,8 +238,6 @@ export function DmDetailPage() {
       </div>
     );
   }
-
-  const otherParticipants = group.participant_ids.filter((pid) => pid !== currentUserId);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -279,18 +275,7 @@ export function DmDetailPage() {
             {/* Conversation intro */}
             <div className="mb-6 px-4">
               <div className="flex items-center gap-2 mb-3">
-                {otherParticipants.length <= 3 ? (
-                  otherParticipants.map((pid) => (
-                    <Avatar key={pid} displayName={resolveName(pid)} size="lg" />
-                  ))
-                ) : (
-                  <>
-                    <Avatar displayName={resolveName(otherParticipants[0])} size="lg" />
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-bg-tertiary text-sm font-semibold text-text-muted">
-                      +{otherParticipants.length - 1}
-                    </div>
-                  </>
-                )}
+                <Avatar displayName={buildTitle()} size="lg" />
               </div>
               <h2 className="text-lg font-bold text-text-primary">{buildTitle()}</h2>
               <p className="mt-1 text-sm text-text-muted">
@@ -304,8 +289,8 @@ export function DmDetailPage() {
               <DmBubble
                 key={msg.id}
                 message={msg}
-                senderName={resolveName(msg.sender_id)}
-                isOwn={msg.sender_id === currentUserId}
+                senderName={resolveName(msg.author_id)}
+                isOwn={msg.author_id === currentUserId}
               />
             ))}
           </div>

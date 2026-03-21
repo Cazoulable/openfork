@@ -20,8 +20,6 @@ import { EmptyState } from '../ui/EmptyState';
 import { Spinner } from '../ui/Spinner';
 import { CommentItem } from './CommentItem';
 import {
-  listWorkspaces,
-  listProjects,
   getIssue,
   updateIssue,
   deleteIssue,
@@ -113,45 +111,20 @@ export function IssueDetailPage() {
     setLoading(true);
     setError('');
 
-    // We need a project ID to fetch the issue. We'll try to find it.
-    // The issue URL is /issues/:id, and the API is /projects/:projectId/issues/:issueId.
-    // Since we don't know the projectId from the URL alone, we iterate over workspaces/projects.
-    // But to keep this simple, we'll try fetching directly using a "search" approach.
-    // The API path for getIssue needs projectId. We'll need to store projectId in some context.
-    // Workaround: try a direct fetch that the backend might support, or
-    // use a two-step approach: list workspaces -> list projects -> find matching issue.
-
-    // We need to find the project that contains this issue.
-    // Walk workspaces -> projects -> try getIssue until we find it.
     (async () => {
       try {
-        const workspaces = await listWorkspaces();
-        for (const ws of workspaces) {
-          const projects = await listProjects(ws.id);
-          for (const proj of projects) {
-            try {
-              const issueData = await getIssue(proj.id, issueId!);
-              if (cancelled) return;
-              setIssue(issueData);
-              // Load comments and labels
-              const [commentsData, labelsData] = await Promise.all([
-                listComments(issueData.id),
-                listLabels(proj.id),
-              ]);
-              if (cancelled) return;
-              setComments(commentsData);
-              setProjectLabels(labelsData);
-              setLoading(false);
-              return;
-            } catch {
-              // Issue not in this project, try next
-            }
-          }
-        }
-        if (!cancelled) {
-          setError('Issue not found');
-          setLoading(false);
-        }
+        const issueData = await getIssue(issueId!);
+        if (cancelled) return;
+        setIssue(issueData);
+        // Load comments and labels
+        const [commentsData, labelsData] = await Promise.all([
+          listComments(issueData.id),
+          listLabels(issueData.project_id),
+        ]);
+        if (cancelled) return;
+        setComments(commentsData);
+        setProjectLabels(labelsData);
+        setLoading(false);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load issue');
@@ -177,11 +150,11 @@ export function IssueDetailPage() {
   // Edit issue handler
   const handleEditIssue = async (e: FormEvent) => {
     e.preventDefault();
-    if (!issue || !projectId) return;
+    if (!issue) return;
     setEditSaving(true);
     setEditError('');
     try {
-      const updated = await updateIssue(projectId, issue.id, {
+      const updated = await updateIssue(issue.id, {
         title: editTitle.trim() || undefined,
         description: editDesc.trim(),
         status: editStatus,
@@ -201,7 +174,7 @@ export function IssueDetailPage() {
     if (!issue || !projectId) return;
     setDeleting(true);
     try {
-      await deleteIssue(projectId, issue.id);
+      await deleteIssue(issue.id);
       navigate(`/projects/${projectId}`);
     } catch {
       setDeleting(false);
@@ -226,9 +199,9 @@ export function IssueDetailPage() {
 
   // Inline status change
   const handleStatusChange = async (status: IssueStatus) => {
-    if (!issue || !projectId) return;
+    if (!issue) return;
     try {
-      const updated = await updateIssue(projectId, issue.id, { status });
+      const updated = await updateIssue(issue.id, { status });
       setIssue(updated);
     } catch {
       // ignore
@@ -237,9 +210,9 @@ export function IssueDetailPage() {
 
   // Inline priority change
   const handlePriorityChange = async (priority: IssuePriority) => {
-    if (!issue || !projectId) return;
+    if (!issue) return;
     try {
-      const updated = await updateIssue(projectId, issue.id, { priority });
+      const updated = await updateIssue(issue.id, { priority });
       setIssue(updated);
     } catch {
       // ignore
@@ -317,7 +290,7 @@ export function IssueDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <TopBar title={`Issue ${issue.identifier}`}>
+      <TopBar title={`Issue ${issue.issue_number}`}>
         <Button
           size="sm"
           variant="ghost"
@@ -345,7 +318,7 @@ export function IssueDetailPage() {
             <div className="flex items-center gap-3">
               <StatusBadge status={issue.status} />
               <PriorityBadge priority={issue.priority} />
-              <span className="text-xs font-mono text-text-muted">{issue.identifier}</span>
+              <span className="text-xs font-mono text-text-muted">{issue.issue_number}</span>
             </div>
             {issue.description && (
               <p className="mt-4 text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
@@ -567,7 +540,7 @@ export function IssueDetailPage() {
       <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Issue">
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-secondary">
-            Are you sure you want to delete <span className="font-semibold text-text-primary">{issue.identifier}: {issue.title}</span>?
+            Are you sure you want to delete <span className="font-semibold text-text-primary">{issue.issue_number}: {issue.title}</span>?
             This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3 pt-2">

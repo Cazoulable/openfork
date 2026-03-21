@@ -26,7 +26,6 @@ import {
   createIssue,
   listLabels,
   createLabel,
-  listWorkspaces,
   type Project,
   type Issue,
   type IssueStatus,
@@ -74,7 +73,6 @@ export function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [error, setError] = useState('');
@@ -111,33 +109,17 @@ export function ProjectDetailPage() {
   const [labelColor, setLabelColor] = useState(LABEL_COLORS[0]);
   const [labelCreating, setLabelCreating] = useState(false);
 
-  // Find workspace ID (we need it for project API calls)
-  useEffect(() => {
-    let cancelled = false;
-    listWorkspaces()
-      .then((wsList) => {
-        if (cancelled) return;
-        // We'll try each workspace to find the project
-        if (wsList.length > 0) {
-          setWorkspaceId(wsList[0].id);
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
   // Fetch project
   useEffect(() => {
-    if (!projectId || !workspaceId) return;
+    if (!projectId) return;
     let cancelled = false;
     setLoading(true);
     setError('');
 
-    getProject(workspaceId, projectId)
+    getProject(projectId)
       .then((data) => {
         if (cancelled) return;
         setProject(data);
-        setWorkspaceId(data.workspace_id);
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load project');
@@ -147,7 +129,7 @@ export function ProjectDetailPage() {
       });
 
     return () => { cancelled = true; };
-  }, [projectId, workspaceId]);
+  }, [projectId]);
 
   // Fetch issues
   const fetchIssues = useCallback(async (filters?: ListIssuesFilters) => {
@@ -180,11 +162,11 @@ export function ProjectDetailPage() {
   // Edit project handler
   const handleEditProject = async (e: FormEvent) => {
     e.preventDefault();
-    if (!project || !workspaceId) return;
+    if (!project) return;
     setEditSaving(true);
     setEditError('');
     try {
-      const updated = await updateProject(workspaceId, project.id, {
+      const updated = await updateProject(project.id, {
         name: editName.trim() || undefined,
         description: editDesc.trim(),
       });
@@ -199,10 +181,10 @@ export function ProjectDetailPage() {
 
   // Delete project handler
   const handleDeleteProject = async () => {
-    if (!project || !workspaceId) return;
+    if (!project) return;
     setDeleting(true);
     try {
-      await deleteProject(workspaceId, project.id);
+      await deleteProject(project.id);
       navigate('/projects');
     } catch {
       setDeleting(false);

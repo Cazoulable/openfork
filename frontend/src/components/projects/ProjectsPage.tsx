@@ -112,7 +112,7 @@ export function ProjectsPage() {
 
   // Create project form
   const [projName, setProjName] = useState('');
-  const [projPrefix, setProjPrefix] = useState('');
+  const [projSlug, setProjSlug] = useState('');
   const [projDesc, setProjDesc] = useState('');
   const [projCreating, setProjCreating] = useState(false);
   const [projError, setProjError] = useState('');
@@ -139,10 +139,10 @@ export function ProjectsPage() {
   }, []);
 
   // Fetch projects when workspace changes
-  const fetchProjects = useCallback(async (wsId: string) => {
+  const fetchProjects = useCallback(async () => {
     setLoadingProjects(true);
     try {
-      const data = await listProjects(wsId);
+      const data = await listProjects();
       setProjects(data);
     } catch {
       setProjects([]);
@@ -153,7 +153,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     if (selectedWs) {
-      fetchProjects(selectedWs.id);
+      fetchProjects();
     } else {
       setProjects([]);
     }
@@ -182,19 +182,20 @@ export function ProjectsPage() {
   // Create project handler
   const handleCreateProject = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedWs || !projName.trim() || !projPrefix.trim()) return;
+    if (!selectedWs || !projName.trim() || !projSlug.trim()) return;
     setProjCreating(true);
     setProjError('');
     try {
-      const proj = await createProject(selectedWs.id, {
+      const proj = await createProject({
+        workspace_id: selectedWs.id,
         name: projName.trim(),
-        prefix: projPrefix.trim().toUpperCase(),
+        slug: projSlug.trim().toLowerCase(),
         description: projDesc.trim() || undefined,
       });
       setProjects((prev) => [...prev, proj]);
       setShowCreateProject(false);
       setProjName('');
-      setProjPrefix('');
+      setProjSlug('');
       setProjDesc('');
     } catch (err) {
       setProjError(err instanceof Error ? err.message : 'Failed to create project');
@@ -209,17 +210,10 @@ export function ProjectsPage() {
     setWsSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
   };
 
-  // Auto-generate prefix from project name
+  // Auto-generate slug from project name
   const handleProjNameChange = (val: string) => {
     setProjName(val);
-    const words = val.trim().split(/\s+/);
-    if (words.length >= 2) {
-      setProjPrefix(words.map((w) => w[0]).join('').toUpperCase().slice(0, 4));
-    } else if (val.trim().length > 0) {
-      setProjPrefix(val.trim().toUpperCase().slice(0, 3));
-    } else {
-      setProjPrefix('');
-    }
+    setProjSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
   };
 
   // Loading state
@@ -341,12 +335,11 @@ export function ProjectsPage() {
             autoFocus
           />
           <Input
-            label="Prefix"
-            placeholder="FE"
-            value={projPrefix}
-            onChange={(e) => setProjPrefix(e.target.value.toUpperCase())}
+            label="Slug"
+            placeholder="frontend-app"
+            value={projSlug}
+            onChange={(e) => setProjSlug(e.target.value.toLowerCase())}
             required
-            maxLength={5}
           />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text-secondary">Description</label>

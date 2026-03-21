@@ -32,7 +32,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <h3 className="truncate text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">
               {project.name}
             </h3>
-            <p className="text-xs text-text-muted font-mono">{project.prefix}</p>
+            <p className="text-xs text-text-muted font-mono">{project.slug}</p>
           </div>
         </div>
         <ChevronRight className="h-4 w-4 shrink-0 text-text-muted opacity-0 transition-opacity group-hover:opacity-100" />

@@ -13,12 +13,6 @@ import * as api from '../../api/messaging';
 import type { Channel } from '../../api/messaging';
 
 // ---------------------------------------------------------------------------
-// Hardcoded workspace ID (until workspace context is implemented)
-// ---------------------------------------------------------------------------
-
-const WORKSPACE_ID = 'default';
-
-// ---------------------------------------------------------------------------
 // New Channel Modal
 // ---------------------------------------------------------------------------
 
@@ -57,9 +51,10 @@ function NewChannelModal({ open, onClose, onCreated }: NewChannelModalProps) {
     setSubmitting(true);
     setError(null);
     try {
+      const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const channel = await api.createChannel({
-        workspace_id: WORKSPACE_ID,
         name: trimmedName,
+        slug,
         description: description.trim() || undefined,
         is_private: isPrivate,
       });
@@ -188,7 +183,7 @@ export function ChannelsPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.listChannels(WORKSPACE_ID);
+      const data = await api.listChannels();
       setChannels(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load channels');

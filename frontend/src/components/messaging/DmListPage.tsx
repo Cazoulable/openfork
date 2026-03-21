@@ -10,7 +10,7 @@ import { Spinner } from '../ui/Spinner';
 import { Avatar } from '../ui/Avatar';
 import * as api from '../../api/messaging';
 import type { DmGroup } from '../../api/messaging';
-import { useAuthStore } from '../../stores/auth';
+
 
 // ---------------------------------------------------------------------------
 // New DM Modal
@@ -93,48 +93,30 @@ function NewDmModal({ open, onClose, onCreated }: NewDmModalProps) {
 
 interface DmGroupItemProps {
   group: DmGroup;
-  currentUserId: string;
   onClick: () => void;
 }
 
-function DmGroupItem({ group, currentUserId, onClick }: DmGroupItemProps) {
-  // Show other participants (exclude self)
-  const others = group.participant_ids.filter((pid) => pid !== currentUserId);
-  const displayNames = others.length > 0
-    ? others.map((id) => `User ${id.slice(0, 8)}`)
-    : ['You (self)'];
-
-  const primaryName = displayNames[0];
-  const remaining = displayNames.length - 1;
+function DmGroupItem({ group, onClick }: DmGroupItemProps) {
+  const displayName = `Conversation ${group.id.slice(0, 8)}`;
 
   return (
     <button
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors duration-150 hover:bg-bg-hover cursor-pointer"
     >
-      {/* Avatar stack */}
+      {/* Avatar */}
       <div className="relative shrink-0">
-        <Avatar displayName={primaryName} size="md" />
-        {others.length > 1 && (
-          <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-bg-tertiary text-[9px] font-bold text-text-muted border border-bg-primary">
-            +{others.length - 1}
-          </div>
-        )}
+        <Avatar displayName={displayName} size="md" />
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-text-primary">
-            {displayNames.join(', ')}
+            {displayName}
           </span>
-          {remaining > 0 && (
-            <span className="text-xs text-text-muted shrink-0">
-              and {remaining} other{remaining > 1 ? 's' : ''}
-            </span>
-          )}
         </div>
         <p className="mt-0.5 text-xs text-text-muted">
-          {group.participant_ids.length} participant{group.participant_ids.length !== 1 ? 's' : ''}
+          Created {new Date(group.created_at).toLocaleDateString()}
         </p>
       </div>
 
@@ -151,9 +133,6 @@ function DmGroupItem({ group, currentUserId, onClick }: DmGroupItemProps) {
 
 export function DmListPage() {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
-  const currentUserId = user?.id || '';
-
   const [groups, setGroups] = useState<DmGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -227,7 +206,6 @@ export function DmListPage() {
               <DmGroupItem
                 key={g.id}
                 group={g}
-                currentUserId={currentUserId}
                 onClick={() => navigate(`/dm/${g.id}`)}
               />
             ))}
