@@ -1,16 +1,33 @@
 // ---------------------------------------------------------------------------
 // Base API fetch wrapper with JWT management and automatic token refresh.
-// Tokens are held in module-scoped variables (never in localStorage) so they
-// survive across calls but are wiped on page reload for safety.
+// Tokens are persisted to localStorage so sessions survive page reloads.
 // ---------------------------------------------------------------------------
 
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
+const TOKEN_KEY = "openfork_tokens";
 
-/** Persist a fresh token pair in memory. */
+interface StoredTokens {
+  access: string;
+  refresh: string;
+}
+
+function loadTokens(): StoredTokens | null {
+  try {
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as StoredTokens;
+  } catch {
+    return null;
+  }
+}
+
+let accessToken: string | null = loadTokens()?.access ?? null;
+let refreshToken: string | null = loadTokens()?.refresh ?? null;
+
+/** Persist a fresh token pair in memory and localStorage. */
 export function setTokens(access: string, refresh: string): void {
   accessToken = access;
   refreshToken = refresh;
+  localStorage.setItem(TOKEN_KEY, JSON.stringify({ access, refresh }));
 }
 
 /** Return the current access token (or null). */
@@ -23,10 +40,11 @@ export function getRefreshToken(): string | null {
   return refreshToken;
 }
 
-/** Wipe both tokens from memory. */
+/** Wipe both tokens from memory and localStorage. */
 export function clearTokens(): void {
   accessToken = null;
   refreshToken = null;
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 // ---------------------------------------------------------------------------

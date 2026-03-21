@@ -1,9 +1,10 @@
 // ---------------------------------------------------------------------------
-// Zustand auth store — holds the current user and authentication state
+// Zustand auth store — holds the current user and authentication state.
+// Persisted to localStorage so sessions survive page reloads.
 // ---------------------------------------------------------------------------
 
 import { create } from "zustand";
-import { clearTokens } from "../api/client";
+import { clearTokens, getAccessToken } from "../api/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,19 +31,43 @@ interface AuthActions {
 type AuthStore = AuthState & AuthActions;
 
 // ---------------------------------------------------------------------------
+// Persistence helpers
+// ---------------------------------------------------------------------------
+
+const USER_KEY = "openfork_user";
+
+function loadUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 
+const savedUser = loadUser();
+// Only restore if we also have a token — otherwise stale
+const hasToken = !!getAccessToken();
+
 export const useAuthStore = create<AuthStore>((set) => ({
   // State ------------------------------------------------------------------
-  user: null,
-  isAuthenticated: false,
+  user: hasToken ? savedUser : null,
+  isAuthenticated: hasToken && !!savedUser,
 
   // Actions ----------------------------------------------------------------
-  setUser: (user) => set({ user, isAuthenticated: true }),
+  setUser: (user) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    set({ user, isAuthenticated: true });
+  },
 
   logout: () => {
     clearTokens();
+    localStorage.removeItem(USER_KEY);
     set({ user: null, isAuthenticated: false });
   },
 }));
