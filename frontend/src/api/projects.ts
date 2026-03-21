@@ -141,7 +141,7 @@ async function unwrap<T>(res: Response): Promise<T> {
 export async function createWorkspace(
   payload: CreateWorkspacePayload,
 ): Promise<Workspace> {
-  const res = await apiFetch("/workspaces", {
+  const res = await apiFetch("/api/workspaces", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -149,12 +149,12 @@ export async function createWorkspace(
 }
 
 export async function listWorkspaces(): Promise<Workspace[]> {
-  const res = await apiFetch("/workspaces");
+  const res = await apiFetch("/api/workspaces");
   return unwrap<Workspace[]>(res);
 }
 
 export async function getWorkspace(workspaceId: string): Promise<Workspace> {
-  const res = await apiFetch(`/workspaces/${workspaceId}`);
+  const res = await apiFetch(`/api/workspaces/${workspaceId}`);
   return unwrap<Workspace>(res);
 }
 
@@ -166,7 +166,7 @@ export async function createProject(
   workspaceId: string,
   payload: CreateProjectPayload,
 ): Promise<Project> {
-  const res = await apiFetch(`/workspaces/${workspaceId}/projects`, {
+  const res = await apiFetch(`/api/workspaces/${workspaceId}/projects`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -174,7 +174,7 @@ export async function createProject(
 }
 
 export async function listProjects(workspaceId: string): Promise<Project[]> {
-  const res = await apiFetch(`/workspaces/${workspaceId}/projects`);
+  const res = await apiFetch(`/api/workspaces/${workspaceId}/projects`);
   return unwrap<Project[]>(res);
 }
 
@@ -225,7 +225,7 @@ export async function createIssue(
   projectId: string,
   payload: CreateIssuePayload,
 ): Promise<Issue> {
-  const res = await apiFetch(`/projects/${projectId}/issues`, {
+  const res = await apiFetch(`/api/projects/${projectId}/issues`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -251,7 +251,7 @@ export async function getIssue(
   projectId: string,
   issueId: string,
 ): Promise<Issue> {
-  const res = await apiFetch(`/projects/${projectId}/issues/${issueId}`);
+  const res = await apiFetch(`/api/projects/${projectId}/issues/${issueId}`);
   return unwrap<Issue>(res);
 }
 
@@ -260,7 +260,7 @@ export async function updateIssue(
   issueId: string,
   payload: UpdateIssuePayload,
 ): Promise<Issue> {
-  const res = await apiFetch(`/projects/${projectId}/issues/${issueId}`, {
+  const res = await apiFetch(`/api/projects/${projectId}/issues/${issueId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -271,7 +271,7 @@ export async function deleteIssue(
   projectId: string,
   issueId: string,
 ): Promise<void> {
-  const res = await apiFetch(`/projects/${projectId}/issues/${issueId}`, {
+  const res = await apiFetch(`/api/projects/${projectId}/issues/${issueId}`, {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -288,7 +288,7 @@ export async function createComment(
   issueId: string,
   payload: CreateCommentPayload,
 ): Promise<Comment> {
-  const res = await apiFetch(`/issues/${issueId}/comments`, {
+  const res = await apiFetch(`/api/issues/${issueId}/comments`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -296,7 +296,7 @@ export async function createComment(
 }
 
 export async function listComments(issueId: string): Promise<Comment[]> {
-  const res = await apiFetch(`/issues/${issueId}/comments`);
+  const res = await apiFetch(`/api/issues/${issueId}/comments`);
   return unwrap<Comment[]>(res);
 }
 
@@ -304,7 +304,7 @@ export async function updateComment(
   commentId: string,
   payload: UpdateCommentPayload,
 ): Promise<Comment> {
-  const res = await apiFetch(`/comments/${commentId}`, {
+  const res = await apiFetch(`/api/comments/${commentId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -312,7 +312,7 @@ export async function updateComment(
 }
 
 export async function deleteComment(commentId: string): Promise<void> {
-  const res = await apiFetch(`/comments/${commentId}`, { method: "DELETE" });
+  const res = await apiFetch(`/api/comments/${commentId}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error((err as { message?: string }).message ?? "Delete failed");
@@ -327,7 +327,7 @@ export async function createLabel(
   projectId: string,
   payload: CreateLabelPayload,
 ): Promise<Label> {
-  const res = await apiFetch(`/projects/${projectId}/labels`, {
+  const res = await apiFetch(`/api/projects/${projectId}/labels`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -335,7 +335,7 @@ export async function createLabel(
 }
 
 export async function listLabels(projectId: string): Promise<Label[]> {
-  const res = await apiFetch(`/projects/${projectId}/labels`);
+  const res = await apiFetch(`/api/projects/${projectId}/labels`);
   return unwrap<Label[]>(res);
 }
 
@@ -348,7 +348,7 @@ export async function setIssueLabels(
   issueId: string,
   labelIds: string[],
 ): Promise<void> {
-  const res = await apiFetch(`/issues/${issueId}/labels`, {
+  const res = await apiFetch(`/api/issues/${issueId}/labels`, {
     method: "PUT",
     body: JSON.stringify({ label_ids: labelIds }),
   });

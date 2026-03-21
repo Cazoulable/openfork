@@ -33,7 +33,7 @@ export function clearTokens(): void {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-const API_BASE = "/api";
+const API_BASE = "";
 
 /** True while a refresh request is in-flight so concurrent 401s don't race. */
 let refreshInFlight: Promise<boolean> | null = null;

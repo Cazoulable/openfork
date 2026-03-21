@@ -140,7 +140,7 @@ async function unwrapVoid(res: Response): Promise<void> {
 export async function createChannel(
   payload: CreateChannelPayload,
 ): Promise<Channel> {
-  const res = await apiFetch("/channels", {
+  const res = await apiFetch("/api/channels", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -148,12 +148,12 @@ export async function createChannel(
 }
 
 export async function listChannels(workspaceId: string): Promise<Channel[]> {
-  const res = await apiFetch(`/channels?workspace_id=${workspaceId}`);
+  const res = await apiFetch(`/api/channels?workspace_id=${workspaceId}`);
   return unwrap<Channel[]>(res);
 }
 
 export async function getChannel(channelId: string): Promise<Channel> {
-  const res = await apiFetch(`/channels/${channelId}`);
+  const res = await apiFetch(`/api/channels/${channelId}`);
   return unwrap<Channel>(res);
 }
 
@@ -161,7 +161,7 @@ export async function updateChannel(
   channelId: string,
   payload: UpdateChannelPayload,
 ): Promise<Channel> {
-  const res = await apiFetch(`/channels/${channelId}`, {
+  const res = await apiFetch(`/api/channels/${channelId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -169,17 +169,17 @@ export async function updateChannel(
 }
 
 export async function deleteChannel(channelId: string): Promise<void> {
-  const res = await apiFetch(`/channels/${channelId}`, { method: "DELETE" });
+  const res = await apiFetch(`/api/channels/${channelId}`, { method: "DELETE" });
   return unwrapVoid(res);
 }
 
 export async function joinChannel(channelId: string): Promise<void> {
-  const res = await apiFetch(`/channels/${channelId}/join`, { method: "POST" });
+  const res = await apiFetch(`/api/channels/${channelId}/join`, { method: "POST" });
   return unwrapVoid(res);
 }
 
 export async function leaveChannel(channelId: string): Promise<void> {
-  const res = await apiFetch(`/channels/${channelId}/leave`, {
+  const res = await apiFetch(`/api/channels/${channelId}/leave`, {
     method: "POST",
   });
   return unwrapVoid(res);
@@ -193,7 +193,7 @@ export async function sendMessage(
   channelId: string,
   payload: SendMessagePayload,
 ): Promise<Message> {
-  const res = await apiFetch(`/channels/${channelId}/messages`, {
+  const res = await apiFetch(`/api/channels/${channelId}/messages`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -223,7 +223,7 @@ export async function listMessages(
 }
 
 export async function getThread(messageId: string): Promise<Message[]> {
-  const res = await apiFetch(`/messages/${messageId}/thread`);
+  const res = await apiFetch(`/api/messages/${messageId}/thread`);
   return unwrap<Message[]>(res);
 }
 
@@ -231,7 +231,7 @@ export async function updateMessage(
   messageId: string,
   payload: UpdateMessagePayload,
 ): Promise<Message> {
-  const res = await apiFetch(`/messages/${messageId}`, {
+  const res = await apiFetch(`/api/messages/${messageId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -239,7 +239,7 @@ export async function updateMessage(
 }
 
 export async function deleteMessage(messageId: string): Promise<void> {
-  const res = await apiFetch(`/messages/${messageId}`, { method: "DELETE" });
+  const res = await apiFetch(`/api/messages/${messageId}`, { method: "DELETE" });
   return unwrapVoid(res);
 }
 
@@ -251,7 +251,7 @@ export async function addReaction(
   messageId: string,
   emoji: string,
 ): Promise<Reaction> {
-  const res = await apiFetch(`/messages/${messageId}/reactions`, {
+  const res = await apiFetch(`/api/messages/${messageId}/reactions`, {
     method: "POST",
     body: JSON.stringify({ emoji }),
   });
@@ -262,7 +262,7 @@ export async function removeReaction(
   messageId: string,
   emoji: string,
 ): Promise<void> {
-  const res = await apiFetch(`/messages/${messageId}/reactions`, {
+  const res = await apiFetch(`/api/messages/${messageId}/reactions`, {
     method: "DELETE",
     body: JSON.stringify({ emoji }),
   });
@@ -274,7 +274,7 @@ export async function removeReaction(
 // ---------------------------------------------------------------------------
 
 export async function createDmGroup(userIds: string[]): Promise<DmGroup> {
-  const res = await apiFetch("/dm-groups", {
+  const res = await apiFetch("/api/dm", {
     method: "POST",
     body: JSON.stringify({ user_ids: userIds }),
   });
@@ -282,7 +282,7 @@ export async function createDmGroup(userIds: string[]): Promise<DmGroup> {
 }
 
 export async function listDmGroups(): Promise<DmGroup[]> {
-  const res = await apiFetch("/dm-groups");
+  const res = await apiFetch("/api/dm");
   return unwrap<DmGroup[]>(res);
 }
 
@@ -290,7 +290,7 @@ export async function sendDm(
   groupId: string,
   body: string,
 ): Promise<DmMessage> {
-  const res = await apiFetch(`/dm-groups/${groupId}/messages`, {
+  const res = await apiFetch(`/api/dm/${groupId}/messages`, {
     method: "POST",
     body: JSON.stringify({ body }),
   });
@@ -332,7 +332,7 @@ export async function searchMessages(
   if (offset !== undefined) params.set("offset", String(offset));
   if (limit !== undefined) params.set("limit", String(limit));
 
-  const res = await apiFetch(`/messages/search?${params.toString()}`);
+  const res = await apiFetch(`/api/messages/search?${params.toString()}`);
   return unwrap<SearchResult>(res);
 }
 
@@ -341,6 +341,6 @@ export async function searchMessages(
 // ---------------------------------------------------------------------------
 
 export async function getPresence(userId: string): Promise<UserPresence> {
-  const res = await apiFetch(`/users/${userId}/presence`);
+  const res = await apiFetch(`/api/presence/${userId}`);
   return unwrap<UserPresence>(res);
 }
