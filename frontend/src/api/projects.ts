@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Projects module API — workspaces, projects, issues, comments, labels
+// Projects module API — projects, issues, comments, labels
 // ---------------------------------------------------------------------------
 
 import { apiFetch } from "./client";
@@ -7,21 +7,6 @@ import { apiFetch } from "./client";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-// Workspace -------------------------------------------------------------------
-
-export interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateWorkspacePayload {
-  name: string;
-  slug: string;
-}
 
 // Project ---------------------------------------------------------------------
 
@@ -131,30 +116,6 @@ async function unwrap<T>(res: Response): Promise<T> {
     throw new Error((err as { message?: string }).message ?? `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
-}
-
-// ---------------------------------------------------------------------------
-// Workspaces
-// ---------------------------------------------------------------------------
-
-export async function createWorkspace(
-  payload: CreateWorkspacePayload,
-): Promise<Workspace> {
-  const res = await apiFetch("/api/workspaces", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  return unwrap<Workspace>(res);
-}
-
-export async function listWorkspaces(): Promise<Workspace[]> {
-  const res = await apiFetch("/api/workspaces");
-  return unwrap<Workspace[]>(res);
-}
-
-export async function getWorkspace(workspaceId: string): Promise<Workspace> {
-  const res = await apiFetch(`/api/workspaces/${workspaceId}`);
-  return unwrap<Workspace>(res);
 }
 
 // ---------------------------------------------------------------------------

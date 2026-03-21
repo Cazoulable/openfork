@@ -9,6 +9,7 @@ import { Modal } from '../ui/Modal';
 import { EmptyState } from '../ui/EmptyState';
 import { Spinner } from '../ui/Spinner';
 import { Badge } from '../ui/Badge';
+import { useWorkspaceStore } from '../../stores/workspace';
 import * as api from '../../api/messaging';
 import type { Channel } from '../../api/messaging';
 
@@ -23,6 +24,7 @@ interface NewChannelModalProps {
 }
 
 function NewChannelModal({ open, onClose, onCreated }: NewChannelModalProps) {
+  const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -57,6 +59,7 @@ function NewChannelModal({ open, onClose, onCreated }: NewChannelModalProps) {
         slug,
         description: description.trim() || undefined,
         is_private: isPrivate,
+        workspace_id: currentWorkspace?.id,
       });
       onCreated(channel);
       handleClose();
@@ -173,6 +176,7 @@ function ChannelListItem({ channel, onClick }: ChannelListItemProps) {
 
 export function ChannelsPage() {
   const navigate = useNavigate();
+  const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,14 +187,14 @@ export function ChannelsPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.listChannels();
+      const data = await api.listChannels(currentWorkspace?.id);
       setChannels(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load channels');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentWorkspace?.id]);
 
   useEffect(() => {
     fetchChannels();

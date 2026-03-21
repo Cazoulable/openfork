@@ -4,11 +4,12 @@ import { clsx } from 'clsx';
 import {
   LayoutGrid,
   MessageSquare,
+  Settings,
   LogOut,
-  Hexagon,
 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { useAuth } from '../../hooks/useAuth';
+import { useWorkspaceStore } from '../../stores/workspace';
 
 interface NavItem {
   to: string;
@@ -16,28 +17,44 @@ interface NavItem {
   label: string;
 }
 
-const navItems: NavItem[] = [
-  {
-    to: '/projects',
-    icon: <LayoutGrid className="h-5 w-5 shrink-0" />,
-    label: 'Project Tracking',
-  },
-  {
-    to: '/channels',
-    icon: <MessageSquare className="h-5 w-5 shrink-0" />,
-    label: 'Messaging',
-  },
-];
-
 export function Sidebar() {
   const [expanded, setExpanded] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
+
+  const navItems: NavItem[] = [
+    {
+      to: '/projects',
+      icon: <LayoutGrid className="h-5 w-5 shrink-0" />,
+      label: 'Project Tracking',
+    },
+    {
+      to: '/channels',
+      icon: <MessageSquare className="h-5 w-5 shrink-0" />,
+      label: 'Messaging',
+    },
+  ];
+
+  // Show workspace settings only for admin/owner
+  const showSettings =
+    currentWorkspace?.role === 'owner' || currentWorkspace?.role === 'admin';
+
+  if (showSettings) {
+    navItems.push({
+      to: '/workspace/settings',
+      icon: <Settings className="h-5 w-5 shrink-0" />,
+      label: 'Workspace Settings',
+    });
+  }
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const workspaceName = currentWorkspace?.name ?? 'Workspace';
+  const workspaceInitial = workspaceName.charAt(0).toUpperCase();
 
   return (
     <aside
@@ -48,20 +65,27 @@ export function Sidebar() {
         expanded ? 'w-56' : 'w-14',
       )}
     >
-      {/* Logo */}
-      <div className="flex h-14 items-center gap-3 border-b border-border px-3.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-white">
-          <Hexagon className="h-4 w-4" />
+      {/* Workspace identity */}
+      <button
+        type="button"
+        onClick={() => navigate('/workspace')}
+        className="flex h-14 items-center gap-3 border-b border-border px-3.5 cursor-pointer hover:bg-bg-hover transition-colors"
+      >
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-white font-bold text-xs">
+          {workspaceInitial}
         </div>
-        <span
+        <div
           className={clsx(
-            'text-sm font-bold text-text-primary whitespace-nowrap transition-opacity duration-200',
+            'min-w-0 transition-opacity duration-200',
             expanded ? 'opacity-100' : 'opacity-0',
           )}
         >
-          OpenFork
-        </span>
-      </div>
+          <span className="block truncate text-sm font-bold text-text-primary whitespace-nowrap">
+            {workspaceName}
+          </span>
+          <span className="block text-[10px] text-text-muted whitespace-nowrap">by OpenFork</span>
+        </div>
+      </button>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 py-3">

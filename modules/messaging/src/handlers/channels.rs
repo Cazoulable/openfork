@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -24,7 +24,7 @@ pub async fn create_channel(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
     let channel = sqlx::query_as::<_, Channel>(
-        "INSERT INTO channels (id, name, slug, description, is_private, creator_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
+        "INSERT INTO channels (id, name, slug, description, is_private, creator_id, workspace_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
     )
     .bind(id)
     .bind(&req.name)
@@ -32,6 +32,7 @@ pub async fn create_channel(
     .bind(&req.description)
     .bind(is_private)
     .bind(user.0.sub)
+    .bind(req.workspace_id)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
@@ -54,12 +55,22 @@ pub async fn create_channel(
 pub async fn list_channels(
     State(state): State<Arc<AppState>>,
     _user: AuthUser,
+    Query(params): Query<ListChannelsParams>,
 ) -> Result<Json<Vec<Channel>>, (StatusCode, Json<serde_json::Value>)> {
-    let channels = sqlx::query_as::<_, Channel>(
-        "SELECT * FROM channels WHERE is_private = false ORDER BY created_at DESC"
-    )
-    .fetch_all(state.db.pool())
-    .await
+    let channels = if let Some(workspace_id) = params.workspace_id {
+        sqlx::query_as::<_, Channel>(
+            "SELECT * FROM channels WHERE is_private = false AND workspace_id = $1 ORDER BY created_at DESC"
+        )
+        .bind(workspace_id)
+        .fetch_all(state.db.pool())
+        .await
+    } else {
+        sqlx::query_as::<_, Channel>(
+            "SELECT * FROM channels WHERE is_private = false ORDER BY created_at DESC"
+        )
+        .fetch_all(state.db.pool())
+        .await
+    }
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
     Ok(Json(channels))

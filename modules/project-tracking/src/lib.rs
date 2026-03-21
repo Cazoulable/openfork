@@ -42,10 +42,6 @@ impl Module for ProjectTrackingModule {
         });
 
         Router::new()
-            // Workspaces
-            .route("/api/workspaces", post(handlers::workspaces::create_workspace))
-            .route("/api/workspaces", get(handlers::workspaces::list_workspaces))
-            .route("/api/workspaces/{id}", get(handlers::workspaces::get_workspace))
             // Projects
             .route("/api/projects", post(handlers::projects::create_project))
             .route("/api/projects", get(handlers::projects::list_projects))

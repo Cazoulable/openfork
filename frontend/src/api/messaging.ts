@@ -26,6 +26,7 @@ export interface CreateChannelPayload {
   slug: string;
   description?: string;
   is_private?: boolean;
+  workspace_id?: string;
 }
 
 export interface UpdateChannelPayload {
@@ -126,8 +127,12 @@ export async function createChannel(
   return unwrap<Channel>(res);
 }
 
-export async function listChannels(): Promise<Channel[]> {
-  const res = await apiFetch("/api/channels");
+export async function listChannels(workspaceId?: string): Promise<Channel[]> {
+  const params = new URLSearchParams();
+  if (workspaceId) params.set("workspace_id", workspaceId);
+  const qs = params.toString();
+  const path = `/api/channels${qs ? `?${qs}` : ""}`;
+  const res = await apiFetch(path);
   return unwrap<Channel[]>(res);
 }
 

@@ -12,6 +12,7 @@ pub struct Channel {
     pub description: Option<String>,
     pub is_private: bool,
     pub creator_id: Uuid,
+    pub workspace_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -67,6 +68,12 @@ pub struct CreateChannelRequest {
     pub slug: String,
     pub description: Option<String>,
     pub is_private: Option<bool>,
+    pub workspace_id: Option<Uuid>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListChannelsParams {
+    pub workspace_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]

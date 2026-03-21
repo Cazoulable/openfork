@@ -3,12 +3,14 @@ use std::sync::Arc;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
+use axum::Extension;
 use openfork_core::{
     auth::{handlers::AuthState, JwtManager, auth_routes},
     config::AppConfig,
     events::EventBus,
     module::ModuleRegistry,
     storage::factory,
+    workspace::{handlers::WorkspaceState, workspace_routes},
 };
 use openfork_mod_project_tracking::ProjectTrackingModule;
 use openfork_mod_messaging::MessagingModule;
@@ -57,8 +59,10 @@ async fn main() -> Result<()> {
 
     // Build router
     let auth_state = Arc::new(AuthState { db: default_db.clone(), jwt: jwt.clone() });
+    let ws_state = Arc::new(WorkspaceState { db: default_db.clone() });
     let app = axum::Router::new()
         .merge(auth_routes(auth_state))
+        .merge(workspace_routes(ws_state).layer(Extension(jwt.clone())))
         .merge(registry.routes());
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
