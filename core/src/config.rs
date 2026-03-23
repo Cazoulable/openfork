@@ -8,7 +8,7 @@ pub struct AppConfig {
     pub auth: AuthConfig,
     pub storage: StorageConfig,
     #[serde(default)]
-    pub modules: HashMap<String, ModuleConfig>,
+    pub apps: HashMap<String, PerAppConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -47,7 +47,7 @@ pub struct CacheConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct ModuleConfig {
+pub struct PerAppConfig {
     pub storage: Option<DatabaseConfig>,
     pub cache: Option<CacheConfig>,
 }
@@ -92,6 +92,6 @@ mod tests {
         let config: AppConfig = toml::from_str(content).unwrap();
         assert_eq!(config.server.port, 8080);
         assert_eq!(config.auth.jwt_secret, "CHANGE-ME-in-production");
-        assert!(config.modules.is_empty());
+        assert!(config.apps.is_empty());
     }
 }

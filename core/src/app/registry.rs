@@ -1,5 +1,5 @@
-use super::context::ModuleContext;
-use super::traits::Module;
+use super::context::AppContext;
+use super::traits::App;
 use crate::auth::JwtManager;
 use crate::config::AppConfig;
 use crate::events::EventBus;
@@ -8,21 +8,21 @@ use axum::Router;
 use std::sync::Arc;
 use tracing::info;
 
-pub struct ModuleRegistry {
-    modules: Vec<Box<dyn Module>>,
+pub struct AppRegistry {
+    apps: Vec<Box<dyn App>>,
 }
 
-impl ModuleRegistry {
+impl AppRegistry {
     pub fn new() -> Self {
-        Self { modules: Vec::new() }
+        Self { apps: Vec::new() }
     }
 
-    pub fn register(&mut self, module: Box<dyn Module>) {
-        info!("Registered module: {} v{}", module.name(), module.version());
-        self.modules.push(module);
+    pub fn register(&mut self, app: Box<dyn App>) {
+        info!("Registered app: {} v{}", app.name(), app.version());
+        self.apps.push(app);
     }
 
-    /// Initialize all modules: create their storage, build their context, call init.
+    /// Initialize all apps: create their storage, build their context, call init.
     pub async fn init_all(
         &mut self,
         config: &AppConfig,
@@ -31,12 +31,11 @@ impl ModuleRegistry {
         jwt: Arc<JwtManager>,
         events: Arc<EventBus>,
     ) -> anyhow::Result<()> {
-        for module in &mut self.modules {
-            let reqs = module.storage_requirements();
+        for app in &mut self.apps {
+            let reqs = app.storage_requirements();
 
             let db = if reqs.relational {
-                let db_config = factory::resolve_db_config(module.name(), config);
-                // If same URL as default, reuse the pool
+                let db_config = factory::resolve_db_config(app.name(), config);
                 if db_config.url == config.storage.default.url {
                     Some(default_db.clone())
                 } else {
@@ -47,7 +46,7 @@ impl ModuleRegistry {
             };
 
             let cache = if reqs.cache {
-                let cache_config = factory::resolve_cache_config(module.name(), config);
+                let cache_config = factory::resolve_cache_config(app.name(), config);
                 if cache_config.url == config.storage.cache.url {
                     Some(default_cache.clone())
                 } else {
@@ -57,32 +56,32 @@ impl ModuleRegistry {
                 None
             };
 
-            let ctx = ModuleContext {
+            let ctx = AppContext {
                 db,
                 cache,
                 jwt: jwt.clone(),
                 events: events.clone(),
             };
 
-            module.init(ctx)?;
-            info!("Initialized module: {}", module.name());
+            app.init(ctx)?;
+            info!("Initialized app: {}", app.name());
         }
         Ok(())
     }
 
-    /// Merge all module routes into a single router.
+    /// Merge all app routes into a single router.
     pub fn routes(&self) -> Router {
         let mut router = Router::new();
-        for module in &self.modules {
-            router = router.merge(module.routes());
+        for app in &self.apps {
+            router = router.merge(app.routes());
         }
         router
     }
 
-    /// Shutdown all modules.
+    /// Shutdown all apps.
     pub fn shutdown_all(&self) -> anyhow::Result<()> {
-        for module in &self.modules {
-            module.shutdown()?;
+        for app in &self.apps {
+            app.shutdown()?;
         }
         Ok(())
     }

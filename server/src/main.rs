@@ -8,12 +8,12 @@ use openfork_core::{
     auth::{handlers::AuthState, JwtManager, auth_routes},
     config::AppConfig,
     events::EventBus,
-    module::ModuleRegistry,
+    app::AppRegistry,
     storage::factory,
     workspace::{handlers::WorkspaceState, workspace_routes},
 };
-use openfork_mod_project_tracking::ProjectTrackingModule;
-use openfork_mod_messaging::MessagingModule;
+use openfork_app_project_tracking::ProjectTrackingApp;
+use openfork_app_messaging::MessagingApp;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -55,10 +55,10 @@ async fn main() -> Result<()> {
     let event_bus_listener = event_bus.clone();
     tokio::spawn(async move { event_bus_listener.start_redis_listener().await });
 
-    // Module registry
-    let mut registry = ModuleRegistry::new();
-    registry.register(Box::new(ProjectTrackingModule::new()));
-    registry.register(Box::new(MessagingModule::new()));
+    // App registry
+    let mut registry = AppRegistry::new();
+    registry.register(Box::new(ProjectTrackingApp::new()));
+    registry.register(Box::new(MessagingApp::new()));
 
     registry.init_all(&config, &default_db, &default_cache, jwt.clone(), event_bus.clone()).await?;
 

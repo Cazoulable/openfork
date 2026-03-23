@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use fred::clients::Client as RedisClient;
 
 /// Relational storage handle — wraps a Postgres connection pool.
-/// Modules receive this and run their own queries against it.
+/// Apps receive this and run their own queries against it.
 #[derive(Clone)]
 pub struct RelationalStore {
     pool: PgPool,
@@ -34,7 +34,7 @@ impl CacheStore {
     }
 }
 
-/// What storage a module needs. Declared by each module.
+/// What storage an app needs. Declared by each app.
 #[derive(Debug, Clone, Default)]
 pub struct StorageRequirements {
     pub relational: bool,

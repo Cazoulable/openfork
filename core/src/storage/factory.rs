@@ -21,20 +21,20 @@ pub async fn create_cache_store(config: &CacheConfig) -> Result<CacheStore> {
     Ok(CacheStore::new(client))
 }
 
-/// Resolve the database config for a module: module-specific override or default.
-pub fn resolve_db_config<'a>(module_name: &str, app_config: &'a AppConfig) -> &'a DatabaseConfig {
+/// Resolve the database config for an app: app-specific override or default.
+pub fn resolve_db_config<'a>(app_name: &str, app_config: &'a AppConfig) -> &'a DatabaseConfig {
     app_config
-        .modules
-        .get(module_name)
+        .apps
+        .get(app_name)
         .and_then(|m| m.storage.as_ref())
         .unwrap_or(&app_config.storage.default)
 }
 
-/// Resolve the cache config for a module: module-specific override or default.
-pub fn resolve_cache_config<'a>(module_name: &str, app_config: &'a AppConfig) -> &'a CacheConfig {
+/// Resolve the cache config for an app: app-specific override or default.
+pub fn resolve_cache_config<'a>(app_name: &str, app_config: &'a AppConfig) -> &'a CacheConfig {
     app_config
-        .modules
-        .get(module_name)
+        .apps
+        .get(app_name)
         .and_then(|m| m.cache.as_ref())
         .unwrap_or(&app_config.storage.cache)
 }

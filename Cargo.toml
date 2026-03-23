@@ -3,8 +3,8 @@ members = [
     "shared",
     "core",
     "proto",
-    "modules/project-tracking",
-    "modules/messaging",
+    "apps/project-tracking",
+    "apps/messaging",
     "server",
 ]
 resolver = "2"
@@ -70,5 +70,5 @@ testcontainers = "0.23"
 openfork-shared = { path = "shared" }
 openfork-core = { path = "core" }
 openfork-proto = { path = "proto" }
-openfork-mod-project-tracking = { path = "modules/project-tracking" }
-openfork-mod-messaging = { path = "modules/messaging" }
+openfork-app-project-tracking = { path = "apps/project-tracking" }
+openfork-app-messaging = { path = "apps/messaging" }

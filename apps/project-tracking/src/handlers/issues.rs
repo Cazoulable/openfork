@@ -20,8 +20,8 @@ pub async fn create_issue(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let id = Uuid::new_v4();
     let issue = sqlx::query_as::<_, Issue>(
-        "INSERT INTO issues (id, project_id, title, description, status, priority, issue_type, estimate, due_date, assignee_id, creator_id) \
-         VALUES ($1, $2, $3, $4, COALESCE($5, 'backlog'), COALESCE($6, 'none'), COALESCE($7, 'task'), COALESCE($8, 'none'), $9, $10, $11) RETURNING *"
+        "INSERT INTO issues (id, project_id, title, description, status, priority, issue_type, estimate, due_date, creator_id) \
+         VALUES ($1, $2, $3, $4, COALESCE($5, 'backlog'), COALESCE($6, 'none'), COALESCE($7, 'task'), COALESCE($8, 'none'), $9, $10) RETURNING *"
     )
     .bind(id)
     .bind(project_id)
@@ -32,7 +32,6 @@ pub async fn create_issue(
     .bind(&req.issue_type)
     .bind(&req.estimate)
     .bind(&req.due_date)
-    .bind(&req.assignee_id)
     .bind(user.0.sub)
     .fetch_one(state.db.pool())
     .await

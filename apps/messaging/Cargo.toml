@@ -1,5 +1,5 @@
 [package]
-name = "openfork-mod-messaging"
+name = "openfork-app-messaging"
 version.workspace = true
 edition.workspace = true
 

@@ -1,5 +1,5 @@
 [package]
-name = "openfork-mod-project-tracking"
+name = "openfork-app-project-tracking"
 version.workspace = true
 edition.workspace = true
 

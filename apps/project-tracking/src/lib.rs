@@ -3,24 +3,24 @@ pub mod models;
 pub mod state;
 
 use axum::{Extension, routing::{delete, get, post, put}, Router};
-use openfork_core::module::{Module, ModuleContext};
+use openfork_core::app::{App, AppContext};
 use openfork_core::storage::StorageRequirements;
 use openfork_shared::Result;
 use std::sync::Arc;
 
 use state::AppState;
 
-pub struct ProjectTrackingModule {
-    ctx: Option<ModuleContext>,
+pub struct ProjectTrackingApp {
+    ctx: Option<AppContext>,
 }
 
-impl ProjectTrackingModule {
+impl ProjectTrackingApp {
     pub fn new() -> Self {
         Self { ctx: None }
     }
 }
 
-impl Module for ProjectTrackingModule {
+impl App for ProjectTrackingApp {
     fn name(&self) -> &str { "project-tracking" }
     fn version(&self) -> &str { "0.1.0" }
 
@@ -28,13 +28,13 @@ impl Module for ProjectTrackingModule {
         StorageRequirements { relational: true, cache: false }
     }
 
-    fn init(&mut self, ctx: ModuleContext) -> Result<()> {
+    fn init(&mut self, ctx: AppContext) -> Result<()> {
         self.ctx = Some(ctx);
         Ok(())
     }
 
     fn routes(&self) -> Router {
-        let ctx = self.ctx.as_ref().expect("module not initialized");
+        let ctx = self.ctx.as_ref().expect("app not initialized");
         let jwt = ctx.jwt.clone();
         let state = Arc::new(AppState {
             db: ctx.db.clone().expect("project-tracking requires relational storage"),

@@ -109,7 +109,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>, user_id: uuid::U
 async fn should_forward_event(event: &Event, _user_id: uuid::Uuid, _state: &AppState) -> bool {
     // Forward all messaging events for now
     // In production, check channel membership
-    event.module == "messaging"
+    event.app == "messaging"
 }
 
 pub async fn get_presence(

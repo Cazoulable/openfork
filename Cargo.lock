@@ -1549,6 +1549,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "openfork-app-messaging"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "fred",
+ "futures",
+ "openfork-core",
+ "openfork-proto",
+ "openfork-shared",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tonic",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "openfork-app-project-tracking"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "openfork-core",
+ "openfork-proto",
+ "openfork-shared",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tonic",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "openfork-core"
 version = "0.1.0"
 dependencies = [
@@ -1574,45 +1613,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "openfork-mod-messaging"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "fred",
- "futures",
- "openfork-core",
- "openfork-proto",
- "openfork-shared",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tonic",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "openfork-mod-project-tracking"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "openfork-core",
- "openfork-proto",
- "openfork-shared",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tonic",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "openfork-proto"
 version = "0.1.0"
 dependencies = [
@@ -1628,9 +1628,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "openfork-app-messaging",
+ "openfork-app-project-tracking",
  "openfork-core",
- "openfork-mod-messaging",
- "openfork-mod-project-tracking",
  "openfork-proto",
  "openfork-shared",
  "reqwest",

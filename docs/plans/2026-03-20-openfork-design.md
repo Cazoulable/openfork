@@ -11,11 +11,11 @@ OpenFork is a modular, self-hostable workspace platform that unifies team tools 
 
 ### Core Principles
 
-- **Modular by design** — each feature is a plugin module conforming to a core trait interface. Modules are separate Cargo crates, independently compilable.
-- **Storage flexibility** — each module declares what storage it needs (relational, cache, blob). The core provides adapters for different backends. A deployment can point different modules at different providers.
-- **Single identity** — the core is an OAuth2/OIDC identity provider. Modules never handle authentication — they validate tokens from the core. External SSO integrates as an identity source.
-- **Dual API surface** — REST (JSON) for external clients (web, desktop, mobile), gRPC (protobuf) for internal module-to-module communication.
-- **Start small, grow modularly** — MVP ships with project tracking and messaging. The architecture supports adding modules without changing the core.
+- **Modular by design** — each feature is a plugin app conforming to a core trait interface. Apps are separate Cargo crates, independently compilable.
+- **Storage flexibility** — each app declares what storage it needs (relational, cache, blob). The core provides adapters for different backends. A deployment can point different apps at different providers.
+- **Single identity** — the core is an OAuth2/OIDC identity provider. Apps never handle authentication — they validate tokens from the core. External SSO integrates as an identity source.
+- **Dual API surface** — REST (JSON) for external clients (web, desktop, mobile), gRPC (protobuf) for internal app-to-app communication.
+- **Start small, grow modularly** — MVP ships with project tracking and messaging. The architecture supports adding apps without changing the core.
 
 ### Target Audience
 
@@ -27,51 +27,51 @@ Initial: small-to-mid teams (5–500). Architecture designed so enterprise featu
 
 ### Core Platform Components
 
-- **Plugin registry** — discovers and loads modules at startup. Each module implements a `Module` trait (lifecycle hooks: init, migrate, shutdown).
-- **API gateway** — routes incoming REST requests to the right module. Handles rate limiting, request validation, CORS.
+- **Plugin registry** — discovers and loads apps at startup. Each app implements an `App` trait (lifecycle hooks: init, migrate, shutdown).
+- **API gateway** — routes incoming REST requests to the right app. Handles rate limiting, request validation, CORS.
 - **Auth service** — issues/validates JWTs, manages users, sessions, refresh tokens. OAuth2/OIDC flows. Email/password for MVP, SSO-ready.
-- **Storage abstraction** — traits (`RelationalStore`, `CacheStore`) with default implementations (Postgres, Redis). Modules receive their configured store at init.
-- **Event bus** — Redis Pub/Sub. Modules can publish and subscribe to events. Powers real-time updates via WebSocket connections managed by the core.
-- **gRPC service bus** — modules register gRPC services. Inter-module calls go through this bus.
+- **Storage abstraction** — traits (`RelationalStore`, `CacheStore`) with default implementations (Postgres, Redis). Apps receive their configured store at init.
+- **Event bus** — Redis Pub/Sub. Apps can publish and subscribe to events. Powers real-time updates via WebSocket connections managed by the core.
+- **gRPC service bus** — apps register gRPC services. Inter-app calls go through this bus.
 
 ### Request Flows
 
-**External (client → module):**
+**External (client → app):**
 ```
 Client → REST API Gateway → Auth middleware (JWT validation)
-  → Route to module handler → Module uses storage/event abstractions
+  → Route to app handler → App uses storage/event abstractions
   → Response back through gateway
 ```
 
-**Inter-module:**
+**Inter-app:**
 ```
-Module A → gRPC service bus → Module B handler → Response
+App A → gRPC service bus → App B handler → Response
 ```
 
 **Real-time:**
 ```
-Module publishes event → Redis Pub/Sub → Core WebSocket manager
+App publishes event → Redis Pub/Sub → Core WebSocket manager
   → Push to connected clients with matching subscriptions
 ```
 
 ---
 
-## 3. Module System
+## 3. App System
 
-Each module is a Cargo crate that implements the core `Module` trait.
+Each app is a Cargo crate that implements the core `App` trait.
 
-### Module Trait
+### App Trait
 
 ```rust
-trait Module: Send + Sync {
+trait App: Send + Sync {
     fn name(&self) -> &str;
     fn version(&self) -> Version;
 
     // Lifecycle
-    fn init(&self, ctx: ModuleContext) -> Result<()>;
+    fn init(&self, ctx: AppContext) -> Result<()>;
     fn shutdown(&self) -> Result<()>;
 
-    // Declare what this module needs
+    // Declare what this app needs
     fn storage_requirements(&self) -> StorageRequirements;
     fn rest_routes(&self) -> Vec<Route>;
     fn grpc_services(&self) -> Vec<GrpcService>;
@@ -79,23 +79,23 @@ trait Module: Send + Sync {
 }
 ```
 
-### ModuleContext
+### AppContext
 
 Provided by the core at init:
 - Configured storage backends (already connected)
 - Event bus handle (publish/subscribe)
-- gRPC client to call other modules
+- gRPC client to call other apps
 - Auth utilities (validate tokens, get current user)
 
 ### Key Rules
 
-- **Storage isolation:** modules cannot access each other's storage directly. All inter-module communication goes through gRPC or events.
-- **Declarative storage:** a module says "I need a relational store and a cache store." The core reads deployment config to decide which adapter to provide.
-- **Static registration:** the `server` crate wires modules at compile time (no dynamic loading for MVP).
+- **Storage isolation:** apps cannot access each other's storage directly. All inter-app communication goes through gRPC or events.
+- **Declarative storage:** an app says "I need a relational store and a cache store." The core reads deployment config to decide which adapter to provide.
+- **Static registration:** the `server` crate wires apps at compile time (no dynamic loading for MVP).
 
 ---
 
-## 4. MVP Modules
+## 4. MVP Apps
 
 ### Project Tracking (Linear-like)
 
@@ -142,7 +142,7 @@ Channels can be public or private. Messages support threads and reactions.
 | WebSockets | Axum built-in (tokio-tungstenite) |
 | Auth | jsonwebtoken (JWT) |
 | Serialization | serde / serde_json |
-| Migrations | sqlx-cli (per-module migration folders) |
+| Migrations | sqlx-cli (per-app migration folders) |
 | IDs | uuid |
 | Testing | cargo test + testcontainers-rs |
 | Protobuf | protoc + prost (build dependency) |
@@ -157,12 +157,12 @@ openfork/
 ├── core/                   # auth, storage abstraction, plugin system, API gateway
 ├── proto/                  # protobuf definitions for gRPC
 ├── shared/                 # common types, error handling, utilities
-├── modules/
-│   ├── messaging/          # Slack-like module
-│   └── project-tracking/   # Linear-like module
+├── apps/
+│   ├── messaging/          # Slack-like app
+│   └── project-tracking/   # Linear-like app
 ├── server/                 # binary that wires everything together
 ├── docs/
-│   ├── modules.md
+│   ├── apps.md
 │   └── plans/
 └── docker-compose.yml
 ```
@@ -196,19 +196,19 @@ url = "postgres://localhost/openfork"
 type = "redis"
 url = "redis://localhost:6379"
 
-# Per-module storage overrides
-[modules.messaging.storage]
+# Per-app storage overrides
+[apps.messaging.storage]
 type = "postgres"
 url = "postgres://other-host/messaging"
 
-[modules.project-tracking.storage]
+[apps.project-tracking.storage]
 # omitted = uses default
 ```
 
-Per-module hosting: one config section override to point a module's data at a different backend.
+Per-app hosting: one config section override to point an app's data at a different backend.
 
 ### Deployment (MVP)
 
-- Single binary (`openfork-server`) with all modules compiled in
+- Single binary (`openfork-server`) with all apps compiled in
 - Docker image + `docker-compose.yml` (server + Postgres + Redis)
 - No orchestration for MVP — single binary + Docker Compose

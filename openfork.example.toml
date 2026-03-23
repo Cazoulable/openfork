@@ -14,6 +14,6 @@ max_connections = 10
 [storage.cache]
 url = "redis://localhost:6379"
 
-# Per-module storage overrides (optional)
-# [modules.messaging.storage]
+# Per-app storage overrides (optional)
+# [apps.messaging.storage]
 # url = "postgres://openfork:openfork@other-host:5432/messaging"

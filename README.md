@@ -4,12 +4,12 @@ A modular, self-hostable workspace platform that unifies team tools under a sing
 
 ## Why OpenFork?
 
-Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each with its own login, data silo, and billing. OpenFork replaces this fragmentation with a single platform where modules communicate natively, share a common identity layer, and let you choose where your data lives.
+Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each with its own login, data silo, and billing. OpenFork replaces this fragmentation with a single platform where apps communicate natively, share a common identity layer, and let you choose where your data lives.
 
-- **Modular** — each feature (messaging, project tracking, docs, etc.) is an independent module. Enable only what you need.
+- **Modular** — each feature (messaging, project tracking, docs, etc.) is an independent app. Enable only what you need.
 - **Self-hostable** — run on your own infrastructure with a single binary and Docker Compose.
-- **Storage flexibility** — point each module's data at a different backend. Keep sensitive data on-prem while using cloud for the rest.
-- **Single identity** — one login, one set of permissions, across all modules.
+- **Storage flexibility** — point each app's data at a different backend. Keep sensitive data on-prem while using cloud for the rest.
+- **Single identity** — one login, one set of permissions, across all apps.
 - **AI-ready** — a unified data layer designed to enable AI capabilities across all your company data (coming soon).
 
 ## Architecture
@@ -36,16 +36,16 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 │  └──────────┘ └──────────┘ │  Redis/...)   │   │
 │                             └───────────────┘   │
 ├────────────┬────────────┬───────────────────────┤
-│  Module:   │  Module:   │  Module:              │
+│  App:      │  App:      │  App:                 │
 │  Messaging │  Project   │  ... (extensible)     │
 │  (Slack)   │  Tracking  │                       │
 │            │  (Linear)  │                       │
 └────────────┴────────────┴───────────────────────┘
 ```
 
-## Modules
+## Apps
 
-| Module | Description | Status |
+| App | Description | Status |
 |--------|-------------|--------|
 | **Tasks** | Projects, issues, labels, comments | MVP complete |
 | **Chat** | Channels, DMs, threads, reactions, WebSocket, presence, full-text search | MVP complete |
@@ -208,13 +208,13 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/channels
 
 ```
 openfork/
-├── core/                       # Auth, storage, module system, event bus
+├── core/                       # Auth, storage, app system, event bus
 ├── shared/                     # Common types, errors
 ├── proto/                      # Protobuf definitions for gRPC
 ├── migrations/                 # All SQL migrations
-├── modules/
-│   ├── messaging/              # Slack-like backend module
-│   └── project-tracking/       # Linear-like backend module
+├── apps/
+│   ├── messaging/              # Slack-like backend app
+│   └── project-tracking/       # Linear-like backend app
 ├── server/                     # Server binary + integration tests
 ├── frontend/                   # React SPA
 │   └── src/
@@ -230,17 +230,17 @@ openfork/
 └── docs/                       # Design docs and plans
 ```
 
-## Per-Module Storage
+## Per-App Storage
 
-Each module can use a different storage backend. Configure overrides in `openfork.toml`:
+Each app can use a different storage backend. Configure overrides in `openfork.toml`:
 
 ```toml
-# Default storage for all modules
+# Default storage for all apps
 [storage.default]
 url = "postgres://localhost/openfork"
 
-# Override for a specific module
-[modules.messaging.storage]
+# Override for a specific app
+[apps.messaging.storage]
 url = "postgres://other-host/messaging"
 ```
 

@@ -7,7 +7,7 @@ use tracing::{info, error};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub topic: String,
-    pub module: String,
+    pub app: String,
     pub payload: serde_json::Value,
 }
 

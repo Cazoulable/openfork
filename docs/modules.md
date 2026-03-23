@@ -1,12 +1,12 @@
-# OpenFork — Module Map
+# OpenFork — App Map
 
-Living document of all planned modules. Modules marked with `[MVP]` are targeted for initial development.
+Living document of all planned apps. Apps marked with `[MVP]` are targeted for initial development.
 
 ---
 
 ## Communication
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | Messaging | Channels, DMs, threads, reactions (Slack-like) | `[MVP]` |
 | Video/Audio Calls | Real-time video/audio meetings (Zoom/Meet-like) | |
@@ -14,7 +14,7 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ## Knowledge & Docs
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | Docs/Wiki | Pages, databases, collaborative editing (Notion-like) | |
 | File Storage | Shared files, versioning (Drive/Dropbox-like) | |
@@ -22,7 +22,7 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ## Project & Work
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | Project Tracking | Issues, boards, sprints (Linear-like) | `[MVP]` |
 | OKRs/Goals | Objectives tracking, team alignment | |
@@ -30,7 +30,7 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ## Engineering
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | Code Repositories | Git hosting | |
 | CI/CD Pipelines | Build, test, deploy automation | |
@@ -39,7 +39,7 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ## IT & Security
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | VPN / Network Access | Secure remote connectivity | |
 | Device Management | Fleet management, compliance | |
@@ -47,7 +47,7 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ## People & Culture
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | HR / People Directory | Employee profiles, org chart | |
 | Onboarding Workflows | New hire checklists, provisioning | |
@@ -56,7 +56,7 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ## Analytics & Data
 
-| Module | Description | Notes |
+| App | Description | Notes |
 |--------|-------------|-------|
 | Dashboards / BI | Data visualization (Metabase-like) | |
 | Activity / Audit Logs | Cross-module audit trail | |
@@ -64,4 +64,4 @@ Living document of all planned modules. Modules marked with `[MVP]` are targeted
 
 ---
 
-> **Note:** SSO / Identity management is part of the **core platform**, not a module.
+> **Note:** SSO / Identity management is part of the **core platform**, not an app.

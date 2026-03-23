@@ -81,7 +81,6 @@ pub struct Issue {
     pub issue_type: IssueType,
     pub estimate: IssueEstimate,
     pub due_date: Option<chrono::NaiveDate>,
-    pub assignee_id: Option<Uuid>,
     pub creator_id: Uuid,
     pub issue_number: i32,
     pub created_at: DateTime<Utc>,
@@ -128,7 +127,6 @@ pub struct CreateIssueRequest {
     pub description: Option<String>,
     pub status: Option<IssueStatus>,
     pub priority: Option<IssuePriority>,
-    pub assignee_id: Option<Uuid>,
     pub issue_type: Option<IssueType>,
     pub estimate: Option<IssueEstimate>,
     pub due_date: Option<chrono::NaiveDate>,
@@ -140,12 +138,6 @@ pub struct UpdateIssueRequest {
     pub description: Option<String>,
     pub status: Option<IssueStatus>,
     pub priority: Option<IssuePriority>,
-    /// Use `Option<Option<Uuid>>` so we can distinguish:
-    /// - absent field (None) → keep current value
-    /// - explicit null (Some(None)) → clear assignee
-    /// - UUID value (Some(Some(uuid))) → set assignee
-    #[serde(default)]
-    pub assignee_id: Option<Option<Uuid>>,
     pub issue_type: Option<IssueType>,
     pub estimate: Option<IssueEstimate>,
     #[serde(default)]
@@ -171,6 +163,11 @@ pub struct CreateLabelRequest {
 #[derive(Debug, Deserialize)]
 pub struct SetLabelsRequest {
     pub label_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetAssigneesRequest {
+    pub user_ids: Vec<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build the OpenFork core platform with plugin system, storage abstraction, auth, event bus, and two MVP modules (project tracking + messaging).
+**Goal:** Build the OpenFork core platform with plugin system, storage abstraction, auth, event bus, and two MVP apps (project tracking + messaging).
 
-**Architecture:** Cargo workspace with separate crates for core, shared, proto, server, and each module. Core exposes traits (Module, RelationalStore, CacheStore, EventBus). Modules are consumers. Server binary wires everything together. REST externally, gRPC internally.
+**Architecture:** Cargo workspace with separate crates for core, shared, proto, server, and each app. Core exposes traits (App, RelationalStore, CacheStore, EventBus). Apps are consumers. Server binary wires everything together. REST externally, gRPC internally.
 
 **Tech Stack:** Rust 1.92, Tokio, Axum 0.8, Tonic 0.13, SQLx 0.8 (Postgres), fred (Redis), jsonwebtoken, argon2, serde, tracing.
 
@@ -24,10 +24,10 @@
 - Create: `proto/Cargo.toml`
 - Create: `proto/src/lib.rs`
 - Create: `proto/build.rs`
-- Create: `modules/project-tracking/Cargo.toml`
-- Create: `modules/project-tracking/src/lib.rs`
-- Create: `modules/messaging/Cargo.toml`
-- Create: `modules/messaging/src/lib.rs`
+- Create: `apps/project-tracking/Cargo.toml`
+- Create: `apps/project-tracking/src/lib.rs`
+- Create: `apps/messaging/Cargo.toml`
+- Create: `apps/messaging/src/lib.rs`
 - Create: `server/Cargo.toml`
 - Create: `server/src/main.rs`
 
@@ -56,8 +56,8 @@ members = [
     "shared",
     "core",
     "proto",
-    "modules/project-tracking",
-    "modules/messaging",
+    "apps/project-tracking",
+    "apps/messaging",
     "server",
 ]
 resolver = "2"
@@ -117,8 +117,8 @@ testcontainers = "0.23"
 openfork-shared = { path = "shared" }
 openfork-core = { path = "core" }
 openfork-proto = { path = "proto" }
-openfork-mod-project-tracking = { path = "modules/project-tracking" }
-openfork-mod-messaging = { path = "modules/messaging" }
+openfork-app-project-tracking = { path = "apps/project-tracking" }
+openfork-app-messaging = { path = "apps/messaging" }
 ```
 
 **Step 4: Create each crate's `Cargo.toml` and stub `src/lib.rs` (or `src/main.rs` for server)**
@@ -190,10 +190,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-`modules/project-tracking/Cargo.toml`:
+`apps/project-tracking/Cargo.toml`:
 ```toml
 [package]
-name = "openfork-mod-project-tracking"
+name = "openfork-app-project-tracking"
 version.workspace = true
 edition.workspace = true
 
@@ -212,10 +212,10 @@ tracing = { workspace = true }
 tonic = { workspace = true }
 ```
 
-`modules/messaging/Cargo.toml`:
+`apps/messaging/Cargo.toml`:
 ```toml
 [package]
-name = "openfork-mod-messaging"
+name = "openfork-app-messaging"
 version.workspace = true
 edition.workspace = true
 
@@ -247,8 +247,8 @@ edition.workspace = true
 openfork-shared = { workspace = true }
 openfork-core = { workspace = true }
 openfork-proto = { workspace = true }
-openfork-mod-project-tracking = { workspace = true }
-openfork-mod-messaging = { workspace = true }
+openfork-app-project-tracking = { workspace = true }
+openfork-app-messaging = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -466,7 +466,7 @@ pub struct AppConfig {
     pub auth: AuthConfig,
     pub storage: StorageConfig,
     #[serde(default)]
-    pub modules: HashMap<String, ModuleConfig>,
+    pub apps: HashMap<String, AppPluginConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -505,7 +505,7 @@ pub struct CacheConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct ModuleConfig {
+pub struct AppPluginConfig {
     pub storage: Option<DatabaseConfig>,
     pub cache: Option<CacheConfig>,
 }
@@ -561,8 +561,8 @@ max_connections = 10
 [storage.cache]
 url = "redis://localhost:6379"
 
-# Per-module storage overrides (optional)
-# [modules.messaging.storage]
+# Per-app storage overrides (optional)
+# [apps.messaging.storage]
 # url = "postgres://openfork:openfork@other-host:5432/messaging"
 ```
 
@@ -579,7 +579,7 @@ mod tests {
         let config: AppConfig = toml::from_str(content).unwrap();
         assert_eq!(config.server.port, 8080);
         assert_eq!(config.auth.jwt_secret, "CHANGE-ME-in-production");
-        assert!(config.modules.is_empty());
+        assert!(config.apps.is_empty());
     }
 }
 ```
@@ -616,7 +616,7 @@ use sqlx::PgPool;
 use fred::clients::Client as RedisClient;
 
 /// Relational storage handle — wraps a Postgres connection pool.
-/// Modules receive this and run their own queries against it.
+/// Apps receive this and run their own queries against it.
 #[derive(Clone)]
 pub struct RelationalStore {
     pool: PgPool,
@@ -648,7 +648,7 @@ impl CacheStore {
     }
 }
 
-/// What storage a module needs. Declared by each module.
+/// What storage an app needs. Declared by each app.
 #[derive(Debug, Clone, Default)]
 pub struct StorageRequirements {
     pub relational: bool,
@@ -708,20 +708,20 @@ pub async fn create_cache_store(config: &CacheConfig) -> Result<CacheStore> {
     Ok(CacheStore::new(client))
 }
 
-/// Resolve the database config for a module: module-specific override or default.
-pub fn resolve_db_config<'a>(module_name: &str, app_config: &'a AppConfig) -> &'a DatabaseConfig {
+/// Resolve the database config for an app: app-specific override or default.
+pub fn resolve_db_config<'a>(app_name: &str, app_config: &'a AppConfig) -> &'a DatabaseConfig {
     app_config
-        .modules
-        .get(module_name)
+        .apps
+        .get(app_name)
         .and_then(|m| m.storage.as_ref())
         .unwrap_or(&app_config.storage.default)
 }
 
-/// Resolve the cache config for a module: module-specific override or default.
-pub fn resolve_cache_config<'a>(module_name: &str, app_config: &'a AppConfig) -> &'a CacheConfig {
+/// Resolve the cache config for an app: app-specific override or default.
+pub fn resolve_cache_config<'a>(app_name: &str, app_config: &'a AppConfig) -> &'a CacheConfig {
     app_config
-        .modules
-        .get(module_name)
+        .apps
+        .get(app_name)
         .and_then(|m| m.cache.as_ref())
         .unwrap_or(&app_config.storage.cache)
 }
@@ -737,7 +737,7 @@ cargo check -p openfork-core
 
 ```bash
 git add core/
-git commit -m "feat(core): add storage factory with per-module config resolution"
+git commit -m "feat(core): add storage factory with per-app config resolution"
 ```
 
 ---
@@ -1241,41 +1241,41 @@ git commit -m "feat(core): add user model, auth handlers (register, login, refre
 
 ---
 
-## Phase 6: Core — Module System
+## Phase 6: Core — App System
 
-### Task 6.1: Module Trait and Context
+### Task 6.1: App Trait and Context
 
 **Files:**
-- Create: `core/src/module/mod.rs`
-- Create: `core/src/module/traits.rs`
-- Create: `core/src/module/context.rs`
-- Create: `core/src/module/registry.rs`
+- Create: `core/src/app/mod.rs`
+- Create: `core/src/app/traits.rs`
+- Create: `core/src/app/context.rs`
+- Create: `core/src/app/registry.rs`
 - Modify: `core/src/lib.rs`
 
-**Step 1: Define Module trait**
+**Step 1: Define App trait**
 
-`core/src/module/traits.rs`:
+`core/src/app/traits.rs`:
 ```rust
 use axum::Router;
 use openfork_shared::Result;
-use super::context::ModuleContext;
+use super::context::AppContext;
 use crate::storage::StorageRequirements;
 
-/// Every module must implement this trait.
-pub trait Module: Send + Sync {
-    /// Unique module identifier (e.g., "project-tracking").
+/// Every app must implement this trait.
+pub trait App: Send + Sync {
+    /// Unique app identifier (e.g., "project-tracking").
     fn name(&self) -> &str;
 
     /// Semantic version.
     fn version(&self) -> &str;
 
-    /// What storage this module needs.
+    /// What storage this app needs.
     fn storage_requirements(&self) -> StorageRequirements;
 
-    /// Initialize the module with its context. Called once at startup.
-    fn init(&mut self, ctx: ModuleContext) -> Result<()>;
+    /// Initialize the app with its context. Called once at startup.
+    fn init(&mut self, ctx: AppContext) -> Result<()>;
 
-    /// Return REST routes for this module. Called after init.
+    /// Return REST routes for this app. Called after init.
     fn routes(&self) -> Router;
 
     /// Graceful shutdown.
@@ -1285,20 +1285,20 @@ pub trait Module: Send + Sync {
 }
 ```
 
-**Step 2: Define ModuleContext**
+**Step 2: Define AppContext**
 
-`core/src/module/context.rs`:
+`core/src/app/context.rs`:
 ```rust
 use crate::auth::JwtManager;
 use crate::storage::{CacheStore, RelationalStore};
 use std::sync::Arc;
 
-/// Provided to each module at init time. Contains everything a module needs.
+/// Provided to each app at init time. Contains everything an app needs.
 #[derive(Clone)]
-pub struct ModuleContext {
-    /// Relational storage (if module requested it).
+pub struct AppContext {
+    /// Relational storage (if app requested it).
     pub db: Option<RelationalStore>,
-    /// Cache storage (if module requested it).
+    /// Cache storage (if app requested it).
     pub cache: Option<CacheStore>,
     /// JWT manager for auth utilities.
     pub jwt: Arc<JwtManager>,
@@ -1307,10 +1307,10 @@ pub struct ModuleContext {
 
 **Step 3: Define Registry**
 
-`core/src/module/registry.rs`:
+`core/src/app/registry.rs`:
 ```rust
-use super::traits::Module;
-use super::context::ModuleContext;
+use super::traits::App;
+use super::context::AppContext;
 use crate::config::AppConfig;
 use crate::storage::{factory, RelationalStore, CacheStore};
 use crate::auth::JwtManager;
@@ -1318,21 +1318,21 @@ use axum::Router;
 use std::sync::Arc;
 use tracing::info;
 
-pub struct ModuleRegistry {
-    modules: Vec<Box<dyn Module>>,
+pub struct AppRegistry {
+    apps: Vec<Box<dyn App>>,
 }
 
-impl ModuleRegistry {
+impl AppRegistry {
     pub fn new() -> Self {
-        Self { modules: Vec::new() }
+        Self { apps: Vec::new() }
     }
 
-    pub fn register(&mut self, module: Box<dyn Module>) {
-        info!("Registered module: {} v{}", module.name(), module.version());
-        self.modules.push(module);
+    pub fn register(&mut self, app: Box<dyn App>) {
+        info!("Registered app: {} v{}", app.name(), app.version());
+        self.apps.push(app);
     }
 
-    /// Initialize all modules: create their storage, build their context, call init.
+    /// Initialize all apps: create their storage, build their context, call init.
     pub async fn init_all(
         &mut self,
         config: &AppConfig,
@@ -1340,11 +1340,11 @@ impl ModuleRegistry {
         default_cache: &CacheStore,
         jwt: Arc<JwtManager>,
     ) -> anyhow::Result<()> {
-        for module in &mut self.modules {
-            let reqs = module.storage_requirements();
+        for app in &mut self.apps {
+            let reqs = app.storage_requirements();
 
             let db = if reqs.relational {
-                let db_config = factory::resolve_db_config(module.name(), config);
+                let db_config = factory::resolve_db_config(app.name(), config);
                 // If same URL as default, reuse the pool
                 if db_config.url == config.storage.default.url {
                     Some(default_db.clone())
@@ -1356,7 +1356,7 @@ impl ModuleRegistry {
             };
 
             let cache = if reqs.cache {
-                let cache_config = factory::resolve_cache_config(module.name(), config);
+                let cache_config = factory::resolve_cache_config(app.name(), config);
                 if cache_config.url == config.storage.cache.url {
                     Some(default_cache.clone())
                 } else {
@@ -1366,54 +1366,54 @@ impl ModuleRegistry {
                 None
             };
 
-            let ctx = ModuleContext {
+            let ctx = AppContext {
                 db,
                 cache,
                 jwt: jwt.clone(),
             };
 
-            module.init(ctx)?;
-            info!("Initialized module: {}", module.name());
+            app.init(ctx)?;
+            info!("Initialized app: {}", app.name());
         }
         Ok(())
     }
 
-    /// Merge all module routes into a single router.
+    /// Merge all app routes into a single router.
     pub fn routes(&self) -> Router {
         let mut router = Router::new();
-        for module in &self.modules {
-            router = router.merge(module.routes());
+        for app in &self.apps {
+            router = router.merge(app.routes());
         }
         router
     }
 
-    /// Shutdown all modules.
+    /// Shutdown all apps.
     pub fn shutdown_all(&self) -> anyhow::Result<()> {
-        for module in &self.modules {
-            module.shutdown()?;
+        for app in &self.apps {
+            app.shutdown()?;
         }
         Ok(())
     }
 }
 ```
 
-`core/src/module/mod.rs`:
+`core/src/app/mod.rs`:
 ```rust
 pub mod context;
 pub mod registry;
 pub mod traits;
 
-pub use context::ModuleContext;
-pub use registry::ModuleRegistry;
-pub use traits::Module;
+pub use context::AppContext;
+pub use registry::AppRegistry;
+pub use traits::App;
 ```
 
 **Step 4: Update core/src/lib.rs**
 
 ```rust
+pub mod app;
 pub mod auth;
 pub mod config;
-pub mod module;
 pub mod storage;
 ```
 
@@ -1427,7 +1427,7 @@ cargo check -p openfork-core
 
 ```bash
 git add core/
-git commit -m "feat(core): add module trait, context, and registry"
+git commit -m "feat(core): add app trait, context, and registry"
 ```
 
 ---
@@ -1440,7 +1440,7 @@ git commit -m "feat(core): add module trait, context, and registry"
 - Create: `core/src/events/mod.rs`
 - Create: `core/src/events/bus.rs`
 - Modify: `core/src/lib.rs`
-- Modify: `core/src/module/context.rs` (add event bus handle)
+- Modify: `core/src/app/context.rs` (add event bus handle)
 
 **Step 1: Define event types and bus**
 
@@ -1455,7 +1455,7 @@ use tracing::{info, error};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub topic: String,
-    pub module: String,
+    pub app: String,
     pub payload: serde_json::Value,
 }
 
@@ -1513,9 +1513,9 @@ pub mod bus;
 pub use bus::{Event, EventBus};
 ```
 
-**Step 2: Add EventBus to ModuleContext**
+**Step 2: Add EventBus to AppContext**
 
-Update `core/src/module/context.rs`:
+Update `core/src/app/context.rs`:
 ```rust
 use crate::auth::JwtManager;
 use crate::events::EventBus;
@@ -1523,7 +1523,7 @@ use crate::storage::{CacheStore, RelationalStore};
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct ModuleContext {
+pub struct AppContext {
     pub db: Option<RelationalStore>,
     pub cache: Option<CacheStore>,
     pub jwt: Arc<JwtManager>,
@@ -1531,7 +1531,7 @@ pub struct ModuleContext {
 }
 ```
 
-Update `ModuleRegistry::init_all` to accept and pass `Arc<EventBus>`.
+Update `AppRegistry::init_all` to accept and pass `Arc<EventBus>`.
 
 **Step 3: Run check**
 

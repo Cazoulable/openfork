@@ -1,7 +1,7 @@
 # =============================================================================
 # Sandbox workspace seed data
 #
-# An active workspace with realistic data across all modules.
+# An active workspace with realistic data across all apps.
 # This file is the source of truth — the SQL migration mirrors it.
 # =============================================================================
 
@@ -35,7 +35,7 @@ users:
     role: member
 
 # ---------------------------------------------------------------------------
-# Chat module
+# Chat app
 # ---------------------------------------------------------------------------
 
 channels:
@@ -124,7 +124,7 @@ direct_messages:
         content: "Yeah, 3pm works for me."
 
 # ---------------------------------------------------------------------------
-# Tasks module
+# Tasks app
 # ---------------------------------------------------------------------------
 
 projects:

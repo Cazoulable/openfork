@@ -15,7 +15,7 @@ impl AppState {
     pub async fn publish_event(&self, topic: &str, payload: serde_json::Value) {
         let event = Event {
             topic: topic.to_string(),
-            module: "messaging".to_string(),
+            app: "messaging".to_string(),
             payload,
         };
         if let Err(e) = self.events.publish(event).await {

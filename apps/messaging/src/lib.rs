@@ -4,24 +4,24 @@ pub mod state;
 pub mod websocket;
 
 use axum::{Extension, routing::{delete, get, post, put}, Router};
-use openfork_core::module::{Module, ModuleContext};
+use openfork_core::app::{App, AppContext};
 use openfork_core::storage::StorageRequirements;
 use openfork_shared::Result;
 use std::sync::Arc;
 
 use state::AppState;
 
-pub struct MessagingModule {
-    ctx: Option<ModuleContext>,
+pub struct MessagingApp {
+    ctx: Option<AppContext>,
 }
 
-impl MessagingModule {
+impl MessagingApp {
     pub fn new() -> Self {
         Self { ctx: None }
     }
 }
 
-impl Module for MessagingModule {
+impl App for MessagingApp {
     fn name(&self) -> &str { "messaging" }
     fn version(&self) -> &str { "0.1.0" }
 
@@ -29,13 +29,13 @@ impl Module for MessagingModule {
         StorageRequirements { relational: true, cache: true }
     }
 
-    fn init(&mut self, ctx: ModuleContext) -> Result<()> {
+    fn init(&mut self, ctx: AppContext) -> Result<()> {
         self.ctx = Some(ctx);
         Ok(())
     }
 
     fn routes(&self) -> Router {
-        let ctx = self.ctx.as_ref().expect("module not initialized");
+        let ctx = self.ctx.as_ref().expect("app not initialized");
         let jwt = ctx.jwt.clone();
         let state = Arc::new(AppState {
             db: ctx.db.clone().expect("messaging requires relational storage"),

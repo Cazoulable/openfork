@@ -4,11 +4,11 @@ use openfork_core::{
     auth::{handlers::AuthState, JwtManager, auth_routes},
     config::{AppConfig, AuthConfig, CacheConfig, DatabaseConfig, ServerConfig, StorageConfig},
     events::EventBus,
-    module::ModuleRegistry,
+    app::AppRegistry,
     storage::factory,
 };
-use openfork_mod_messaging::MessagingModule;
-use openfork_mod_project_tracking::ProjectTrackingModule;
+use openfork_app_messaging::MessagingApp;
+use openfork_app_project_tracking::ProjectTrackingApp;
 use testcontainers::{core::IntoContainerPort, runners::AsyncRunner, GenericImage, ImageExt};
 use tokio::net::TcpListener;
 
@@ -58,7 +58,7 @@ impl TestServer {
                 default: DatabaseConfig { url: db_url, max_connections: 5 },
                 cache: CacheConfig { url: cache_url },
             },
-            modules: Default::default(),
+            apps: Default::default(),
         };
 
         // Create storage
@@ -85,14 +85,14 @@ impl TestServer {
         // Event bus
         let event_bus = Arc::new(EventBus::new(default_cache.client().clone()));
 
-        // Module registry
-        let mut registry = ModuleRegistry::new();
-        registry.register(Box::new(ProjectTrackingModule::new()));
-        registry.register(Box::new(MessagingModule::new()));
+        // App registry
+        let mut registry = AppRegistry::new();
+        registry.register(Box::new(ProjectTrackingApp::new()));
+        registry.register(Box::new(MessagingApp::new()));
         registry
             .init_all(&config, &default_db, &default_cache, jwt.clone(), event_bus.clone())
             .await
-            .expect("Failed to init modules");
+            .expect("Failed to init apps");
 
         // Build router
         let auth_state = Arc::new(AuthState { db: default_db, jwt: jwt.clone() });
