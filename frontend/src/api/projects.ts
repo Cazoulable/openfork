@@ -49,7 +49,6 @@ export interface Issue {
   issue_type: IssueType;
   estimate: IssueEstimate;
   due_date: string | null;
-  assignee_id: string | null;
   creator_id: string;
   issue_number: number;
   created_at: string;
@@ -61,7 +60,6 @@ export interface CreateIssuePayload {
   description?: string;
   status?: IssueStatus;
   priority?: IssuePriority;
-  assignee_id?: string;
   issue_type?: IssueType;
   estimate?: IssueEstimate;
   due_date?: string;
@@ -72,7 +70,6 @@ export interface UpdateIssuePayload {
   description?: string;
   status?: IssueStatus;
   priority?: IssuePriority;
-  assignee_id?: string | null;
   issue_type?: IssueType;
   estimate?: IssueEstimate;
   due_date?: string | null;
@@ -312,4 +309,41 @@ export async function setIssueLabels(
       (err as { message?: string }).message ?? "Set labels failed",
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Issue Assignees (junction table, like labels)
+// ---------------------------------------------------------------------------
+
+export async function listIssueAssignees(issueId: string): Promise<string[]> {
+  const res = await apiFetch(`/api/issues/${issueId}/assignees`);
+  return unwrap<string[]>(res);
+}
+
+export async function setIssueAssignees(
+  issueId: string,
+  userIds: string[],
+): Promise<void> {
+  const res = await apiFetch(`/api/issues/${issueId}/assignees`, {
+    method: "PUT",
+    body: JSON.stringify({ user_ids: userIds }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(
+      (err as { message?: string }).message ?? "Set assignees failed",
+    );
+  }
+}
+
+export interface IssueAssigneeRow {
+  issue_id: string;
+  user_id: string;
+}
+
+export async function listProjectIssueAssignees(
+  projectId: string,
+): Promise<IssueAssigneeRow[]> {
+  const res = await apiFetch(`/api/projects/${projectId}/issue-assignees`);
+  return unwrap<IssueAssigneeRow[]>(res);
 }

@@ -9,6 +9,7 @@ interface IssueRowProps {
   issue: Issue;
   /** Optional map of user ID to display name for rendering assignee */
   userNames?: Record<string, string>;
+  assigneeIds?: string[];
 }
 
 function formatDate(iso: string): string {
@@ -25,10 +26,9 @@ const TYPE_ICONS: Record<IssueType, React.ReactNode> = {
   improvement: <Wrench className="h-3.5 w-3.5 text-accent" />,
 };
 
-export function IssueRow({ issue, userNames }: IssueRowProps) {
+export function IssueRow({ issue, userNames, assigneeIds = [] }: IssueRowProps) {
   const navigate = useNavigate();
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
-  const assigneeName = issue.assignee_id && userNames?.[issue.assignee_id];
 
   return (
     <button
@@ -61,10 +61,19 @@ export function IssueRow({ issue, userNames }: IssueRowProps) {
         <PriorityBadge priority={issue.priority} />
       </div>
 
-      {/* Assignee */}
-      <div className="w-8 shrink-0 flex justify-center">
-        {assigneeName ? (
-          <Avatar displayName={assigneeName} size="sm" />
+      {/* Assignees */}
+      <div className="w-12 shrink-0 flex justify-center">
+        {assigneeIds.length > 0 ? (
+          <div className="flex -space-x-2">
+            {assigneeIds.slice(0, 3).map((uid) => (
+              <Avatar key={uid} displayName={userNames?.[uid] ?? '?'} size="sm" />
+            ))}
+            {assigneeIds.length > 3 && (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bg-tertiary text-xs font-medium text-text-muted border-2 border-bg-primary">
+                +{assigneeIds.length - 3}
+              </span>
+            )}
+          </div>
         ) : (
           <div className="h-7 w-7 rounded-full border border-dashed border-border" title="Unassigned" />
         )}

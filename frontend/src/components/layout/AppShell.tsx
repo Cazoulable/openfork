@@ -7,11 +7,11 @@ export function AppShell() {
   const [sidebarPinned, setSidebarPinned] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-bg-primary">
+    <div className="flex h-screen overflow-hidden bg-bg-primary">
       <Sidebar pinned={sidebarPinned} onToggle={() => setSidebarPinned(!sidebarPinned)} />
       <main
         className={clsx(
-          'flex flex-1 flex-col transition-[margin] duration-200 ease-in-out',
+          'flex flex-1 flex-col min-w-0 overflow-hidden transition-[margin] duration-200 ease-in-out',
           sidebarPinned ? 'ml-40' : 'ml-14',
         )}
       >

@@ -30,6 +30,8 @@ import {
   createIssue,
   listLabels,
   createLabel,
+  listProjectIssueAssignees,
+  setIssueAssignees,
   type Project,
   type Issue,
   type IssueStatus,
@@ -38,7 +40,9 @@ import {
   type IssueEstimate,
   type ListIssuesFilters,
   type Label,
+  type IssueAssigneeRow,
 } from '../../api/projects';
+import { MemberPicker } from '../ui/MemberPicker';
 import { listMembers, type WorkspaceMemberInfo } from '../../api/workspaces';
 import { useAuthStore } from '../../stores/auth';
 
@@ -92,6 +96,7 @@ export function ProjectDetailPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
+  const [issueAssignees, setIssueAssignees] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [error, setError] = useState('');
@@ -128,7 +133,7 @@ export function ProjectDetailPage() {
   const [issueType, setIssueType] = useState<IssueType>('task');
   const [issueEstimate, setIssueEstimate] = useState<IssueEstimate>('none');
   const [issueDueDate, setIssueDueDate] = useState('');
-  const [issueAssignee, setIssueAssignee] = useState('');
+  const [issueAssigneeIds, setIssueAssigneeIds] = useState<string[]>([]);
   const [issueCreating, setIssueCreating] = useState(false);
   const [issueError, setIssueError] = useState('');
 
@@ -183,15 +188,23 @@ export function ProjectDetailPage() {
     fetchIssues(filters);
   }, [projectId, loading, filterStatus, filterPriority, filterType, filterAssignee, fetchIssues]);
 
-  // Fetch labels and members
+  // Fetch labels, members, and issue assignees
   useEffect(() => {
     if (!projectId || loading || !project) return;
     Promise.all([
       listLabels(projectId).catch(() => [] as Label[]),
       project.workspace_id ? listMembers(project.workspace_id).catch(() => [] as WorkspaceMemberInfo[]) : Promise.resolve([] as WorkspaceMemberInfo[]),
-    ]).then(([labelsData, membersData]) => {
+      listProjectIssueAssignees(projectId).catch(() => [] as IssueAssigneeRow[]),
+    ]).then(([labelsData, membersData, assigneesData]) => {
       setLabels(labelsData);
       setMembers(membersData);
+      // Build issue_id -> user_id[] map
+      const map: Record<string, string[]> = {};
+      for (const row of assigneesData) {
+        if (!map[row.issue_id]) map[row.issue_id] = [];
+        map[row.issue_id].push(row.user_id);
+      }
+      setIssueAssignees(map);
     });
   }, [projectId, loading, project]);
 
@@ -242,8 +255,13 @@ export function ProjectDetailPage() {
         issue_type: issueType,
         estimate: issueEstimate,
         due_date: issueDueDate || undefined,
-        assignee_id: issueAssignee || undefined,
       });
+      // Set assignees if any selected
+      if (issueAssigneeIds.length > 0) {
+        await setIssueAssignees(issue.id, issueAssigneeIds).catch(() => {});
+        // Update local assignees map
+        setIssueAssignees((prev) => ({ ...prev, [issue.id]: [...issueAssigneeIds] }));
+      }
       setIssues((prev) => [issue, ...prev]);
       setShowCreateIssue(false);
       setIssueTitle('');
@@ -253,7 +271,7 @@ export function ProjectDetailPage() {
       setIssueType('task');
       setIssueEstimate('none');
       setIssueDueDate('');
-      setIssueAssignee('');
+      setIssueAssigneeIds([]);
     } catch (err) {
       setIssueError(err instanceof Error ? err.message : 'Failed to create issue');
     } finally {
@@ -445,7 +463,7 @@ export function ProjectDetailPage() {
             <span className="min-w-0 flex-1">Title</span>
             <span className="shrink-0 w-24 text-center">Status</span>
             <span className="shrink-0 w-20 text-center">Priority</span>
-            <span className="w-8 shrink-0 text-center">Assignee</span>
+            <span className="w-12 shrink-0 text-center">Assignee</span>
             <span className="w-16 shrink-0 text-right">Date</span>
           </div>
 
@@ -469,7 +487,7 @@ export function ProjectDetailPage() {
             ) : (
               <div>
                 {issues.map((issue) => (
-                  <IssueRow key={issue.id} issue={issue} userNames={userNames} />
+                  <IssueRow key={issue.id} issue={issue} userNames={userNames} assigneeIds={issueAssignees[issue.id] ?? []} />
                 ))}
               </div>
             )}
@@ -482,7 +500,7 @@ export function ProjectDetailPage() {
               <Spinner size="lg" className="text-accent" />
             </div>
           ) : (
-            <KanbanBoard issues={issues} userNames={userNames} onIssueUpdated={handleIssueUpdated} />
+            <KanbanBoard issues={issues} userNames={userNames} issueAssignees={issueAssignees} onIssueUpdated={handleIssueUpdated} />
           )}
         </div>
       )}
@@ -615,16 +633,15 @@ export function ProjectDetailPage() {
                 onChange={(e) => setIssueDueDate(e.target.value)}
               />
             </div>
-            <Select
-              label="Assignee"
-              value={issueAssignee}
-              onChange={(e) => setIssueAssignee(e.target.value)}
-            >
-              <option value="">Unassigned</option>
-              {members.map((m) => (
-                <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-              ))}
-            </Select>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-secondary">Assignees</label>
+              <MemberPicker
+                members={members.map((m) => ({ user_id: m.user_id, display_name: m.display_name }))}
+                selectedIds={issueAssigneeIds}
+                onChange={setIssueAssigneeIds}
+                placeholder="Search assignees..."
+              />
+            </div>
           </div>
           {issueError && <p className="text-sm text-danger">{issueError}</p>}
           <div className="flex justify-end gap-3 pt-2">

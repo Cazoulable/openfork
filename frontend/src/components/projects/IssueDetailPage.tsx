@@ -26,6 +26,8 @@ import {
   createComment,
   listLabels,
   setIssueLabels,
+  listIssueAssignees,
+  setIssueAssignees,
   type Issue,
   type IssueStatus,
   type IssuePriority,
@@ -34,6 +36,7 @@ import {
   type Comment,
   type Label,
 } from '../../api/projects';
+import { MemberPicker } from '../ui/MemberPicker';
 import { listMembers, type WorkspaceMemberInfo } from '../../api/workspaces';
 import { useAuthStore } from '../../stores/auth';
 import { useWorkspaceStore } from '../../stores/workspace';
@@ -79,6 +82,7 @@ export function IssueDetailPage() {
   const [projectLabels, setProjectLabels] = useState<Label[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
   const [issueLabelsIds, setIssueLabelsIds] = useState<string[]>([]);
+  const [issueAssigneeIds, setIssueAssigneeIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -95,7 +99,6 @@ export function IssueDetailPage() {
   const [editType, setEditType] = useState<IssueType>('task');
   const [editEstimate, setEditEstimate] = useState<IssueEstimate>('none');
   const [editDueDate, setEditDueDate] = useState('');
-  const [editAssignee, setEditAssignee] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -127,15 +130,17 @@ export function IssueDetailPage() {
         if (cancelled) return;
         setIssue(issueData);
         // Load comments and labels
-        const [commentsData, labelsData, membersData] = await Promise.all([
+        const [commentsData, labelsData, membersData, assigneeIds] = await Promise.all([
           listComments(issueData.id),
           listLabels(issueData.project_id),
           wsId ? listMembers(wsId).catch(() => [] as WorkspaceMemberInfo[]) : Promise.resolve([] as WorkspaceMemberInfo[]),
+          listIssueAssignees(issueData.id).catch(() => [] as string[]),
         ]);
         if (cancelled) return;
         setComments(commentsData);
         setProjectLabels(labelsData);
         setMembers(membersData);
+        setIssueAssigneeIds(assigneeIds);
         setLoading(false);
       } catch (err) {
         if (!cancelled) {
@@ -158,7 +163,6 @@ export function IssueDetailPage() {
     setEditType(issue.issue_type);
     setEditEstimate(issue.estimate);
     setEditDueDate(issue.due_date ?? '');
-    setEditAssignee(issue.assignee_id ?? '');
     setEditError('');
     setShowEditIssue(true);
   };
@@ -178,7 +182,6 @@ export function IssueDetailPage() {
         issue_type: editType,
         estimate: editEstimate,
         due_date: editDueDate || null,
-        assignee_id: editAssignee || null,
       });
       setIssue(updated);
       setShowEditIssue(false);
@@ -255,12 +258,15 @@ export function IssueDetailPage() {
     } catch { /* ignore */ }
   };
 
-  const handleAssigneeChange = async (assignee_id: string) => {
-    if (!issue) return;
+  const handleAssigneesChange = async (userIds: string[]) => {
+    if (!issueId) return;
+    setIssueAssigneeIds(userIds);
     try {
-      const updated = await updateIssue(issue.id, { assignee_id: assignee_id || null });
-      setIssue(updated);
-    } catch { /* ignore */ }
+      await setIssueAssignees(issueId, userIds);
+    } catch {
+      // Revert on error
+      setIssueAssigneeIds(issueAssigneeIds);
+    }
   };
 
   const handleDueDateChange = async (due_date: string) => {
@@ -495,20 +501,14 @@ export function IssueDetailPage() {
               </Select>
             </div>
 
-            {/* Assignee */}
+            {/* Assignees */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Assignee</span>
-              <Select
-                value={issue.assignee_id ?? ''}
-                onChange={(e) => handleAssigneeChange(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.user_id} value={m.user_id}>
-                    {m.display_name} (@{m.handle})
-                  </option>
-                ))}
-              </Select>
+              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Assignees</span>
+              <MemberPicker
+                members={members.map((m) => ({ user_id: m.user_id, display_name: m.display_name }))}
+                selectedIds={issueAssigneeIds}
+                onChange={handleAssigneesChange}
+              />
             </div>
 
             {/* Due Date */}
@@ -556,6 +556,17 @@ export function IssueDetailPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Creator */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Creator</span>
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-tertiary px-3 py-2">
+                <span className="text-sm text-text-secondary">
+                  {members.find((m) => m.user_id === issue.creator_id)?.display_name
+                    ?? (issue.creator_id === currentUser?.id ? currentUser.display_name : 'Unknown')}
+                </span>
+              </div>
             </div>
 
             {/* Dates */}
@@ -638,22 +649,14 @@ export function IssueDetailPage() {
               <option value="xl">XL</option>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-secondary">Due Date</label>
-              <input
-                type="date"
-                className="w-full rounded-lg border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-text-primary transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-                value={editDueDate}
-                onChange={(e) => setEditDueDate(e.target.value)}
-              />
-            </div>
-            <Select label="Assignee" value={editAssignee} onChange={(e) => setEditAssignee(e.target.value)}>
-              <option value="">Unassigned</option>
-              {members.map((m) => (
-                <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text-secondary">Due Date</label>
+            <input
+              type="date"
+              className="w-full rounded-lg border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-text-primary transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+              value={editDueDate}
+              onChange={(e) => setEditDueDate(e.target.value)}
+            />
           </div>
           {editError && <p className="text-sm text-danger">{editError}</p>}
           <div className="flex justify-end gap-3 pt-2">

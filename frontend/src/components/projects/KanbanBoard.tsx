@@ -24,10 +24,11 @@ const TYPE_ICONS: Record<IssueType, React.ReactNode> = {
 interface KanbanBoardProps {
   issues: Issue[];
   userNames?: Record<string, string>;
+  issueAssignees?: Record<string, string[]>;
   onIssueUpdated: (updated: Issue) => void;
 }
 
-export function KanbanBoard({ issues, userNames, onIssueUpdated }: KanbanBoardProps) {
+export function KanbanBoard({ issues, userNames, issueAssignees = {}, onIssueUpdated }: KanbanBoardProps) {
   const navigate = useNavigate();
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
 
@@ -54,7 +55,7 @@ export function KanbanBoard({ issues, userNames, onIssueUpdated }: KanbanBoardPr
             {/* Cards */}
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
               {colIssues.map((issue) => {
-                const assigneeName = issue.assignee_id && userNames?.[issue.assignee_id];
+                const assigneeIds = issueAssignees[issue.id] ?? [];
                 return (
                   <button
                     key={issue.id}
@@ -79,11 +80,18 @@ export function KanbanBoard({ issues, userNames, onIssueUpdated }: KanbanBoardPr
                           {issue.estimate.toUpperCase()}
                         </span>
                       )}
-                      <div className="ml-auto">
-                        {assigneeName ? (
-                          <Avatar displayName={assigneeName} size="sm" />
+                      <div className="ml-auto flex -space-x-1.5">
+                        {assigneeIds.length > 0 ? (
+                          assigneeIds.slice(0, 2).map((uid) => (
+                            <Avatar key={uid} displayName={userNames?.[uid] ?? '?'} size="sm" />
+                          ))
                         ) : (
                           <div className="h-6 w-6 rounded-full border border-dashed border-border" />
+                        )}
+                        {assigneeIds.length > 2 && (
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-bg-tertiary text-[10px] font-medium text-text-muted">
+                            +{assigneeIds.length - 2}
+                          </span>
                         )}
                       </div>
                     </div>
