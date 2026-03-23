@@ -120,37 +120,30 @@ export function WorkspaceLayout() {
   const { slug } = useParams<{ slug: string }>();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
+  const logout = useAuthStore((s) => s.logout);
   const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
-  const clearWorkspace = useWorkspaceStore((s) => s.clearWorkspace);
 
   const [error, setError] = useState<string | null>(null);
-  // Track which user validated the cached workspace
-  const [validatedForUser, setValidatedForUser] = useState<string | null>(null);
+  const [fetchedForUser, setFetchedForUser] = useState<string | null>(null);
 
-  const isReady = currentWorkspace?.slug === slug && validatedForUser === userId;
+  // Workspace is ready only if it was fetched for the current user
+  const isReady = currentWorkspace?.slug === slug && fetchedForUser === userId;
 
-  // Reset when slug or user changes
+  // Always re-fetch when slug or user changes
   useEffect(() => {
+    if (!slug || !isAuthenticated || !userId) return;
+    // Skip if already fetched for this user + slug combo
+    if (isReady) return;
+
     setError(null);
-    // If user changed, invalidate the cached workspace
-    if (validatedForUser && validatedForUser !== userId) {
-      clearWorkspace();
-      setValidatedForUser(null);
-    }
-  }, [slug, userId, validatedForUser, clearWorkspace]);
-
-  // Fetch workspace by slug when authenticated and not yet resolved
-  useEffect(() => {
-    if (!slug || !isAuthenticated || isReady) return;
-
     let cancelled = false;
 
     getWorkspaceBySlug(slug)
       .then((ws) => {
         if (!cancelled) {
           setWorkspace(ws);
-          setValidatedForUser(userId ?? null);
+          setFetchedForUser(userId);
         }
       })
       .catch((err) => {
@@ -158,13 +151,14 @@ export function WorkspaceLayout() {
       });
 
     return () => { cancelled = true; };
-  }, [slug, isAuthenticated, isReady, setWorkspace]);
+  }, [slug, isAuthenticated, userId, isReady, setWorkspace]);
 
   // Not authenticated — show inline login form
   if (!isAuthenticated) {
     return <WorkspaceLoginForm slug={slug ?? ''} />;
   }
 
+  // Authenticated but no access — offer to sign in with another account
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg-primary px-4">
@@ -175,16 +169,21 @@ export function WorkspaceLayout() {
               <Hexagon className="h-6 w-6" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary mb-2">Workspace not found</h1>
+          <h1 className="text-2xl font-bold text-text-primary mb-2">Can&apos;t access workspace</h1>
           <p className="text-sm text-text-muted mb-6">
-            The workspace &ldquo;{slug}&rdquo; doesn&apos;t exist or you don&apos;t have access.
+            Your current account doesn&apos;t have access to &ldquo;{slug}&rdquo;.
           </p>
-          <Link
-            to="/new"
-            className="text-sm font-medium text-accent hover:text-accent-hover transition-colors"
-          >
-            Create a workspace
-          </Link>
+          <div className="flex flex-col items-center gap-3">
+            <Button size="sm" onClick={() => logout()}>
+              Sign in with a different account
+            </Button>
+            <Link
+              to="/new"
+              className="text-sm font-medium text-text-muted hover:text-text-primary transition-colors"
+            >
+              or create a new workspace
+            </Link>
+          </div>
         </div>
       </div>
     );
