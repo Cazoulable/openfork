@@ -45,8 +45,13 @@ async fn main() -> Result<()> {
         config.auth.refresh_expiry_seconds,
     ));
 
-    // Event bus
-    let event_bus = Arc::new(EventBus::new(default_cache.client().clone()));
+    // Event bus — needs two separate Redis clients:
+    // one for PUBLISH (normal mode) and one for SUBSCRIBE (sub-only mode)
+    let subscriber_cache = factory::create_cache_store(&config.storage.cache).await?;
+    let event_bus = Arc::new(EventBus::new(
+        default_cache.client().clone(),
+        subscriber_cache.client().clone(),
+    ));
     let event_bus_listener = event_bus.clone();
     tokio::spawn(async move { event_bus_listener.start_redis_listener().await });
 

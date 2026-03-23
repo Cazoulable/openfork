@@ -17,6 +17,8 @@ import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Spinner';
 import { Avatar } from '../ui/Avatar';
 import { useWorkspaceStore } from '../../stores/workspace';
+import { useAuthStore } from '../../stores/auth';
+import { listMembers, type WorkspaceMemberInfo } from '../../api/workspaces';
 import * as api from '../../api/messaging';
 import type { Channel, DmGroup } from '../../api/messaging';
 
@@ -142,12 +144,28 @@ interface NewDmModalProps {
 }
 
 function NewDmModal({ open, onClose, onCreated }: NewDmModalProps) {
-  const [userIds, setUserIds] = useState('');
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const wsId = useWorkspaceStore((s) => s.currentWorkspace?.id);
+  const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  // Fetch members when modal opens
+  useEffect(() => {
+    if (!open || !wsId) return;
+    setLoadingMembers(true);
+    listMembers(wsId)
+      .then((data) => setMembers(data.filter((m) => m.user_id !== currentUserId)))
+      .catch(() => {})
+      .finally(() => setLoadingMembers(false));
+  }, [open, wsId, currentUserId]);
 
   const reset = () => {
-    setUserIds('');
+    setSearch('');
+    setSelectedIds(new Set());
     setError(null);
   };
 
@@ -156,20 +174,24 @@ function NewDmModal({ open, onClose, onCreated }: NewDmModalProps) {
     onClose();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const ids = userIds
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (ids.length === 0) {
-      setError('Please enter at least one user ID');
+  const toggleMember = (userId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (selectedIds.size === 0) {
+      setError('Select at least one person');
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const group = await api.createDmGroup(ids);
+      const group = await api.createDmGroup([...selectedIds]);
       onCreated(group);
       handleClose();
     } catch (err) {
@@ -179,29 +201,99 @@ function NewDmModal({ open, onClose, onCreated }: NewDmModalProps) {
     }
   };
 
+  const filtered = members.filter((m) => {
+    const q = search.toLowerCase();
+    return m.display_name.toLowerCase().includes(q)
+      || m.handle?.toLowerCase().includes(q)
+      || m.email.toLowerCase().includes(q);
+  });
+
   return (
     <Modal open={open} onClose={handleClose} title="New Conversation">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="User IDs"
-          placeholder="Enter user IDs separated by commas"
-          value={userIds}
-          onChange={(e) => setUserIds(e.target.value)}
-          autoFocus
-        />
-        <p className="text-xs text-text-muted">
-          Enter the user IDs of the people you want to message. Separate multiple IDs with commas.
-        </p>
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Search members..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+            className="h-9 w-full rounded-lg border border-border bg-bg-tertiary pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+          />
+        </div>
+
+        {/* Selected chips */}
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {[...selectedIds].map((id) => {
+              const m = members.find((mb) => mb.user_id === id);
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggleMember(id)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/20 transition-colors cursor-pointer"
+                >
+                  {m ? `@${m.handle}` : id.slice(0, 8)}
+                  <X className="h-3 w-3" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Member list */}
+        <div className="max-h-52 overflow-y-auto rounded-lg border border-border">
+          {loadingMembers ? (
+            <div className="flex items-center justify-center py-6">
+              <Spinner size="sm" className="text-text-muted" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="px-4 py-4 text-sm text-text-muted text-center">
+              {search ? 'No members match your search' : 'No other members in this workspace'}
+            </p>
+          ) : (
+            filtered.map((m) => {
+              const selected = selectedIds.has(m.user_id);
+              return (
+                <button
+                  key={m.user_id}
+                  onClick={() => toggleMember(m.user_id)}
+                  className={clsx(
+                    'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer',
+                    selected ? 'bg-accent/10' : 'hover:bg-bg-hover',
+                  )}
+                >
+                  <Avatar displayName={m.display_name} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-text-primary">
+                      {m.display_name}
+                    </p>
+                    <p className="truncate text-xs text-text-muted">
+                      @{m.handle}
+                    </p>
+                  </div>
+                  {selected && (
+                    <span className="shrink-0 text-xs font-medium text-accent">Selected</span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
         {error && <p className="text-xs text-danger">{error}</p>}
+
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" size="sm" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" loading={submitting}>
+          <Button size="sm" loading={submitting} onClick={handleSubmit} disabled={selectedIds.size === 0}>
             Start Conversation
           </Button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 }

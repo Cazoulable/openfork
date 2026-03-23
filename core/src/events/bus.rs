@@ -13,21 +13,24 @@ pub struct Event {
 
 #[derive(Clone)]
 pub struct EventBus {
-    redis: fred::clients::Client,
+    /// Dedicated client for PUBLISH commands (must NOT enter subscribe mode).
+    publisher: fred::clients::Client,
+    /// Dedicated client for SUBSCRIBE (enters sub-only mode).
+    subscriber: fred::clients::Client,
     /// Local broadcast for in-process subscribers (WebSocket manager, etc.)
     local_tx: broadcast::Sender<Event>,
 }
 
 impl EventBus {
-    pub fn new(redis: fred::clients::Client) -> Self {
+    pub fn new(publisher: fred::clients::Client, subscriber: fred::clients::Client) -> Self {
         let (local_tx, _) = broadcast::channel(1024);
-        Self { redis, local_tx }
+        Self { publisher, subscriber, local_tx }
     }
 
     /// Publish an event to Redis and local subscribers.
     pub async fn publish(&self, event: Event) -> anyhow::Result<()> {
         let payload = serde_json::to_string(&event)?;
-        let _: () = self.redis.publish("openfork:events", payload.as_str()).await?;
+        let _: () = self.publisher.publish("openfork:events", payload.as_str()).await?;
         let _ = self.local_tx.send(event); // ignore error if no receivers
         Ok(())
     }
@@ -40,10 +43,9 @@ impl EventBus {
     /// Start listening to Redis pub/sub and forward to local broadcast.
     /// Run this as a background task.
     pub async fn start_redis_listener(self: Arc<Self>) -> anyhow::Result<()> {
-        let subscriber = self.redis.clone();
-        subscriber.subscribe("openfork:events").await?;
+        self.subscriber.subscribe("openfork:events").await?;
 
-        let mut message_stream = subscriber.message_rx();
+        let mut message_stream = self.subscriber.message_rx();
         info!("Event bus: listening on Redis channel openfork:events");
 
         while let Ok(message) = message_stream.recv().await {
