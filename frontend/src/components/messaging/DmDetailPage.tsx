@@ -155,11 +155,11 @@ export function DmDetailPage() {
       .then((members) => {
         const map: Record<string, string> = {};
         for (const m of members) {
-          map[m.user_id] = m.handle ? `@${m.handle}` : m.display_name;
+          map[m.user_id] = m.display_name;
         }
         setUserNames(map);
       })
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load members for names:', err));
   }, [wsId]);
 
   // ---------------------------------------------------------------------------
@@ -224,10 +224,9 @@ export function DmDetailPage() {
 
   const resolveName = useCallback(
     (userId: string) => {
-      if (userNames[userId]) return userNames[userId];
-      if (userId === currentUserId && user?.handle) return `@${user.handle}`;
-      if (userId === currentUserId && user?.display_name) return user.display_name;
-      return `User ${userId.slice(0, 8)}`;
+      return userNames[userId]
+        || (userId === currentUserId ? user?.display_name : undefined)
+        || `User ${userId.slice(0, 8)}`;
     },
     [currentUserId, user, userNames],
   );

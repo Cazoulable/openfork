@@ -11,17 +11,26 @@ workspace:
 
 users:
   - email: owner@gmail.com
+    handle: alice
     display_name: Alice Chen
+    first_name: Alice
+    last_name: Chen
     password: owner123
     role: owner
 
   - email: member1@gmail.com
+    handle: bob
     display_name: Bob Martinez
+    first_name: Bob
+    last_name: Martinez
     password: member1_123
     role: member
 
   - email: member2@gmail.com
+    handle: charlie
     display_name: Charlie Kim
+    first_name: Charlie
+    last_name: Kim
     password: member2_123
     role: member
 
