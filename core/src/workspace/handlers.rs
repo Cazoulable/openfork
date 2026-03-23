@@ -195,7 +195,7 @@ pub async fn list_members(
     verify_membership(state.db.pool(), id, user.0.sub).await?;
 
     let members = sqlx::query_as::<_, WorkspaceMemberInfo>(
-        "SELECT wm.user_id, u.email, u.display_name, wm.role, wm.joined_at \
+        "SELECT wm.user_id, u.email, u.handle, u.display_name, wm.role, wm.joined_at \
          FROM workspace_members wm \
          JOIN users u ON wm.user_id = u.id \
          WHERE wm.workspace_id = $1 \

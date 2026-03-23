@@ -128,6 +128,13 @@ pub async fn update_issue(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateIssueRequest>,
 ) -> Result<Json<Issue>, (StatusCode, Json<serde_json::Value>)> {
+    // For nullable fields (assignee_id, due_date), we use CASE WHEN
+    // so that we can distinguish "not provided" from "set to null".
+    let update_assignee = req.assignee_id.is_some();
+    let assignee_value = req.assignee_id.flatten();
+    let update_due_date = req.due_date.is_some();
+    let due_date_value = req.due_date.flatten();
+
     let issue = sqlx::query_as::<_, Issue>(
         "UPDATE issues SET \
          title = COALESCE($2, title), \
@@ -136,8 +143,8 @@ pub async fn update_issue(
          priority = COALESCE($5, priority), \
          issue_type = COALESCE($6, issue_type), \
          estimate = COALESCE($7, estimate), \
-         due_date = COALESCE($8, due_date), \
-         assignee_id = COALESCE($9, assignee_id), \
+         due_date = CASE WHEN $8 THEN $9 ELSE due_date END, \
+         assignee_id = CASE WHEN $10 THEN $11 ELSE assignee_id END, \
          updated_at = now() \
          WHERE id = $1 RETURNING *"
     )
@@ -148,8 +155,10 @@ pub async fn update_issue(
     .bind(&req.priority)
     .bind(&req.issue_type)
     .bind(&req.estimate)
-    .bind(&req.due_date)
-    .bind(&req.assignee_id)
+    .bind(update_due_date)
+    .bind(&due_date_value)
+    .bind(update_assignee)
+    .bind(&assignee_value)
     .fetch_optional(state.db.pool())
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?

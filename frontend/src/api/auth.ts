@@ -16,7 +16,11 @@ export interface AuthTokens {
 export interface AuthUser {
   id: string;
   email: string;
+  handle: string;
   display_name: string;
+  first_name: string | null;
+  middle_name: string | null;
+  last_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -38,13 +42,14 @@ export interface AuthResponse {
  */
 export async function register(
   email: string,
+  handle: string,
   displayName: string,
   password: string,
 ): Promise<AuthResponse> {
   const res = await apiFetch("/auth/register", {
     method: "POST",
     noAuth: true,
-    body: JSON.stringify({ email, display_name: displayName, password }),
+    body: JSON.stringify({ email, handle, display_name: displayName, password }),
   });
 
   if (!res.ok) {
@@ -84,6 +89,7 @@ export async function login(
 
 export interface RegisterWithWorkspacePayload {
   email: string;
+  handle: string;
   display_name: string;
   password: string;
   workspace_name: string;

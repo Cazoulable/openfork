@@ -29,6 +29,7 @@ export function CreateWorkspacePage() {
 
   // Account fields (only for unauthenticated users)
   const [email, setEmail] = useState('');
+  const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
 
@@ -84,13 +85,14 @@ export function CreateWorkspacePage() {
 
   const handleCreateWithAccount = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !displayName.trim() || !password) return;
+    if (!email.trim() || !handle.trim() || !displayName.trim() || !password) return;
 
     setCreating(true);
     setCreateError('');
     try {
       const res = await registerWithWorkspace({
         email: email.trim(),
+        handle: handle.trim().toLowerCase(),
         display_name: displayName.trim(),
         password,
         workspace_name: wsName.trim(),
@@ -198,6 +200,15 @@ export function CreateWorkspacePage() {
                 required
                 autoComplete="email"
                 autoFocus
+              />
+              <Input
+                label="Handle"
+                type="text"
+                placeholder="johndoe"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                required
+                autoComplete="username"
               />
               <Input
                 label="Display Name"

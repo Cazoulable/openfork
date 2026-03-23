@@ -140,10 +140,16 @@ pub struct UpdateIssueRequest {
     pub description: Option<String>,
     pub status: Option<IssueStatus>,
     pub priority: Option<IssuePriority>,
-    pub assignee_id: Option<Uuid>,
+    /// Use `Option<Option<Uuid>>` so we can distinguish:
+    /// - absent field (None) → keep current value
+    /// - explicit null (Some(None)) → clear assignee
+    /// - UUID value (Some(Some(uuid))) → set assignee
+    #[serde(default)]
+    pub assignee_id: Option<Option<Uuid>>,
     pub issue_type: Option<IssueType>,
     pub estimate: Option<IssueEstimate>,
-    pub due_date: Option<chrono::NaiveDate>,
+    #[serde(default)]
+    pub due_date: Option<Option<chrono::NaiveDate>>,
 }
 
 #[derive(Debug, Deserialize)]

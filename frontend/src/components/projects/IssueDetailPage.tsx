@@ -177,8 +177,8 @@ export function IssueDetailPage() {
         priority: editPriority,
         issue_type: editType,
         estimate: editEstimate,
-        due_date: editDueDate || undefined,
-        assignee_id: editAssignee || undefined,
+        due_date: editDueDate || null,
+        assignee_id: editAssignee || null,
       });
       setIssue(updated);
       setShowEditIssue(false);
@@ -258,7 +258,7 @@ export function IssueDetailPage() {
   const handleAssigneeChange = async (assignee_id: string) => {
     if (!issue) return;
     try {
-      const updated = await updateIssue(issue.id, { assignee_id: assignee_id || undefined });
+      const updated = await updateIssue(issue.id, { assignee_id: assignee_id || null });
       setIssue(updated);
     } catch { /* ignore */ }
   };
@@ -266,7 +266,7 @@ export function IssueDetailPage() {
   const handleDueDateChange = async (due_date: string) => {
     if (!issue) return;
     try {
-      const updated = await updateIssue(issue.id, { due_date: due_date || undefined });
+      const updated = await updateIssue(issue.id, { due_date: due_date || null });
       setIssue(updated);
     } catch { /* ignore */ }
   };
@@ -504,7 +504,9 @@ export function IssueDetailPage() {
               >
                 <option value="">Unassigned</option>
                 {members.map((m) => (
-                  <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name} (@{m.handle})
+                  </option>
                 ))}
               </Select>
             </div>

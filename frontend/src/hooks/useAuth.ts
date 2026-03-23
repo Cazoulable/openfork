@@ -18,6 +18,7 @@ export interface UseAuthReturn {
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
+    handle: string,
     displayName: string,
     password: string,
   ) => Promise<void>;
@@ -55,11 +56,11 @@ export function useAuth(): UseAuthReturn {
   );
 
   const register = useCallback(
-    async (email: string, displayName: string, password: string) => {
+    async (email: string, handle: string, displayName: string, password: string) => {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await authApi.register(email, displayName, password);
+        const res = await authApi.register(email, handle, displayName, password);
         setTokens(res.access_token, res.refresh_token);
         setUser(res.user);
       } catch (err) {

@@ -13,7 +13,11 @@ import { clearTokens, getAccessToken } from "../api/client";
 export interface AuthUser {
   id: string;
   email: string;
+  handle: string;
   display_name: string;
+  first_name: string | null;
+  middle_name: string | null;
+  last_name: string | null;
   created_at: string;
   updated_at: string;
 }

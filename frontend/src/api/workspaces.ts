@@ -25,6 +25,7 @@ export interface WorkspaceWithRole extends Workspace {
 export interface WorkspaceMemberInfo {
   user_id: string;
   email: string;
+  handle: string;
   display_name: string;
   role: WorkspaceRole;
   joined_at: string;

@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 export function RegisterPage() {
   const { register, isLoading, error, clearError, user } = useAuth();
   const [email, setEmail] = useState('');
+  const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
 
@@ -25,7 +26,7 @@ export function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
-    await register(email, displayName, password);
+    await register(email, handle, displayName, password);
   };
 
   return (
@@ -64,6 +65,15 @@ export function RegisterPage() {
               required
               autoComplete="email"
               autoFocus
+            />
+            <Input
+              label="Handle"
+              type="text"
+              placeholder="johndoe"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+              required
+              autoComplete="username"
             />
             <Input
               label="Display Name"

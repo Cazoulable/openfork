@@ -29,17 +29,22 @@ pub async fn register(
 
     let user_id = Uuid::new_v4();
     let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, email, display_name, password_hash) VALUES ($1, $2, $3, $4) RETURNING *"
+        "INSERT INTO users (id, email, handle, display_name, first_name, middle_name, last_name, password_hash) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"
     )
     .bind(user_id)
     .bind(&req.email)
+    .bind(&req.handle)
     .bind(&req.display_name)
+    .bind(&req.first_name)
+    .bind(&req.middle_name)
+    .bind(&req.last_name)
     .bind(&password_hash)
     .fetch_one(state.db.pool())
     .await
     .map_err(|e| {
         if e.to_string().contains("duplicate key") {
-            (StatusCode::CONFLICT, Json(json!({"error": "email already registered"})))
+            (StatusCode::CONFLICT, Json(json!({"error": "email or handle already registered"})))
         } else {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
         }
@@ -81,11 +86,16 @@ pub async fn register_with_workspace(
 
     // Create user
     let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, email, display_name, password_hash) VALUES ($1, $2, $3, $4) RETURNING *"
+        "INSERT INTO users (id, email, handle, display_name, first_name, middle_name, last_name, password_hash) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"
     )
     .bind(user_id)
     .bind(&req.email)
+    .bind(&req.handle)
     .bind(&req.display_name)
+    .bind(&req.first_name)
+    .bind(&req.middle_name)
+    .bind(&req.last_name)
     .bind(&password_hash)
     .fetch_one(&mut *tx)
     .await

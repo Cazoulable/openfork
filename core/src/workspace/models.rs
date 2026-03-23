@@ -38,6 +38,7 @@ pub struct WorkspaceMember {
 pub struct WorkspaceMemberInfo {
     pub user_id: Uuid,
     pub email: String,
+    pub handle: String,
     pub display_name: String,
     pub role: WorkspaceRole,
     pub joined_at: DateTime<Utc>,
