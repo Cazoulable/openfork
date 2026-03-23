@@ -520,18 +520,6 @@ export function ChannelDetailPage() {
               />
             ) : (
               <div className="py-4">
-                {/* Channel intro */}
-                <div className="mb-6 px-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-bg-tertiary text-text-muted mb-3">
-                    <Hash className="h-6 w-6" />
-                  </div>
-                  <h2 className="text-xl font-bold text-text-primary">#{channel.name}</h2>
-                  {channel.description && (
-                    <p className="mt-1 text-sm text-text-muted">{channel.description}</p>
-                  )}
-                  <div className="mt-3 border-b border-border" />
-                </div>
-
                 {/* Messages */}
                 {topLevelMessages.map((msg) => (
                   <MessageBubble

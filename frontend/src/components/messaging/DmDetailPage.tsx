@@ -301,18 +301,6 @@ export function DmDetailPage() {
           />
         ) : (
           <div className="py-4">
-            {/* Conversation intro */}
-            <div className="mb-6 px-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Avatar displayName={buildTitle()} size="lg" />
-              </div>
-              <h2 className="text-lg font-bold text-text-primary">{buildTitle()}</h2>
-              <p className="mt-1 text-sm text-text-muted">
-                This is the start of your conversation.
-              </p>
-              <div className="mt-3 border-b border-border" />
-            </div>
-
             {/* Messages */}
             {messages.map((msg) => (
               <DmBubble
