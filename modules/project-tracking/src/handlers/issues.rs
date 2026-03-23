@@ -20,8 +20,8 @@ pub async fn create_issue(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let id = Uuid::new_v4();
     let issue = sqlx::query_as::<_, Issue>(
-        "INSERT INTO issues (id, project_id, title, description, status, priority, assignee_id, creator_id) \
-         VALUES ($1, $2, $3, $4, COALESCE($5, 'backlog'), COALESCE($6, 'none'), $7, $8) RETURNING *"
+        "INSERT INTO issues (id, project_id, title, description, status, priority, issue_type, estimate, due_date, assignee_id, creator_id) \
+         VALUES ($1, $2, $3, $4, COALESCE($5, 'backlog'), COALESCE($6, 'none'), COALESCE($7, 'task'), COALESCE($8, 'none'), $9, $10, $11) RETURNING *"
     )
     .bind(id)
     .bind(project_id)
@@ -29,6 +29,9 @@ pub async fn create_issue(
     .bind(&req.description)
     .bind(&req.status)
     .bind(&req.priority)
+    .bind(&req.issue_type)
+    .bind(&req.estimate)
+    .bind(&req.due_date)
     .bind(&req.assignee_id)
     .bind(user.0.sub)
     .fetch_one(state.db.pool())
@@ -64,6 +67,14 @@ pub async fn list_issues(
         query.push_str(&format!(" AND assignee_id = ${param_idx}"));
         param_idx += 1;
     }
+    if filters.issue_type.is_some() {
+        query.push_str(&format!(" AND issue_type = ${param_idx}"));
+        param_idx += 1;
+    }
+    if filters.estimate.is_some() {
+        query.push_str(&format!(" AND estimate = ${param_idx}"));
+        param_idx += 1;
+    }
 
     query.push_str(&format!(" ORDER BY created_at DESC OFFSET ${param_idx}"));
     param_idx += 1;
@@ -79,6 +90,12 @@ pub async fn list_issues(
     }
     if let Some(assignee_id) = filters.assignee_id {
         q = q.bind(assignee_id);
+    }
+    if let Some(ref issue_type) = filters.issue_type {
+        q = q.bind(issue_type);
+    }
+    if let Some(ref estimate) = filters.estimate {
+        q = q.bind(estimate);
     }
 
     q = q.bind(offset).bind(limit);
@@ -117,7 +134,10 @@ pub async fn update_issue(
          description = COALESCE($3, description), \
          status = COALESCE($4, status), \
          priority = COALESCE($5, priority), \
-         assignee_id = COALESCE($6, assignee_id), \
+         issue_type = COALESCE($6, issue_type), \
+         estimate = COALESCE($7, estimate), \
+         due_date = COALESCE($8, due_date), \
+         assignee_id = COALESCE($9, assignee_id), \
          updated_at = now() \
          WHERE id = $1 RETURNING *"
     )
@@ -126,6 +146,9 @@ pub async fn update_issue(
     .bind(&req.description)
     .bind(&req.status)
     .bind(&req.priority)
+    .bind(&req.issue_type)
+    .bind(&req.estimate)
+    .bind(&req.due_date)
     .bind(&req.assignee_id)
     .fetch_optional(state.db.pool())
     .await
