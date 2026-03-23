@@ -18,6 +18,7 @@ import { MessageInput } from './MessageInput';
 import { ThreadPanel } from './ThreadPanel';
 import * as api from '../../api/messaging';
 import type { Channel, Message, Reaction } from '../../api/messaging';
+import { listMembers } from '../../api/workspaces';
 import { useAuthStore } from '../../stores/auth';
 import { useWorkspaceStore } from '../../stores/workspace';
 
@@ -198,6 +199,7 @@ export function ChannelDetailPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
+  const wsId = useWorkspaceStore((s) => s.currentWorkspace?.id);
   const currentUserId = user?.id || '';
 
   // Channel state
@@ -223,8 +225,8 @@ export function ChannelDetailPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // User name map (simple: use author_id for now since we don't have a user API)
-  const [userNames] = useState<Record<string, string>>({});
+  // User name map: userId -> handle
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   // Scroll ref
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -254,6 +256,23 @@ export function ChannelDetailPage() {
     load();
     return () => { cancelled = true; };
   }, [id]);
+
+  // ---------------------------------------------------------------------------
+  // Fetch workspace members for display names
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!wsId) return;
+    listMembers(wsId)
+      .then((members) => {
+        const map: Record<string, string> = {};
+        for (const m of members) {
+          map[m.user_id] = m.handle ? `@${m.handle}` : m.display_name;
+        }
+        setUserNames(map);
+      })
+      .catch(() => {});
+  }, [wsId]);
 
   // ---------------------------------------------------------------------------
   // Fetch messages
@@ -421,8 +440,10 @@ export function ChannelDetailPage() {
 
   const resolveName = useCallback(
     (userId: string) => {
+      if (userNames[userId]) return userNames[userId];
+      if (userId === currentUserId && user?.handle) return `@${user.handle}`;
       if (userId === currentUserId && user?.display_name) return user.display_name;
-      return userNames[userId] || `User ${userId.slice(0, 8)}`;
+      return `User ${userId.slice(0, 8)}`;
     },
     [currentUserId, user, userNames],
   );

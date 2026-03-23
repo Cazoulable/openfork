@@ -44,7 +44,8 @@ export function ThreadPanel({
     try {
       setLoading(true);
       const data = await api.getThread(parentMessage.id);
-      setReplies(data);
+      // Filter out the parent message — it's already shown above
+      setReplies(data.filter((m) => m.id !== parentMessage.id));
     } catch (err) {
       console.error('Failed to load thread:', err);
     } finally {

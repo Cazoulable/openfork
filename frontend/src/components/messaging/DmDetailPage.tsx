@@ -9,6 +9,7 @@ import { Avatar } from '../ui/Avatar';
 import { MessageInput } from './MessageInput';
 import * as api from '../../api/messaging';
 import type { DmGroup, DmMessage } from '../../api/messaging';
+import { listMembers } from '../../api/workspaces';
 import { useAuthStore } from '../../stores/auth';
 import { useWorkspaceStore } from '../../stores/workspace';
 
@@ -90,7 +91,11 @@ export function DmDetailPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
+  const wsId = useWorkspaceStore((s) => s.currentWorkspace?.id);
   const currentUserId = user?.id || '';
+
+  // User name map
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   // Group state
   const [group, setGroup] = useState<DmGroup | null>(null);
@@ -139,6 +144,23 @@ export function DmDetailPage() {
     load();
     return () => { cancelled = true; };
   }, [id]);
+
+  // ---------------------------------------------------------------------------
+  // Fetch workspace members for display names
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!wsId) return;
+    listMembers(wsId)
+      .then((members) => {
+        const map: Record<string, string> = {};
+        for (const m of members) {
+          map[m.user_id] = m.handle ? `@${m.handle}` : m.display_name;
+        }
+        setUserNames(map);
+      })
+      .catch(() => {});
+  }, [wsId]);
 
   // ---------------------------------------------------------------------------
   // Fetch messages
@@ -202,10 +224,12 @@ export function DmDetailPage() {
 
   const resolveName = useCallback(
     (userId: string) => {
+      if (userNames[userId]) return userNames[userId];
+      if (userId === currentUserId && user?.handle) return `@${user.handle}`;
       if (userId === currentUserId && user?.display_name) return user.display_name;
       return `User ${userId.slice(0, 8)}`;
     },
-    [currentUserId, user],
+    [currentUserId, user, userNames],
   );
 
   // Build title from group id
