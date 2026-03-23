@@ -476,7 +476,7 @@ export function ProjectDetailPage() {
           </div>
         </>
       ) : (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {loadingIssues ? (
             <div className="flex items-center justify-center py-16">
               <Spinner size="lg" className="text-accent" />

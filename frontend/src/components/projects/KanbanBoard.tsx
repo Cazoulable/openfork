@@ -39,7 +39,7 @@ export function KanbanBoard({ issues, userNames, onIssueUpdated }: KanbanBoardPr
   };
 
   return (
-    <div className="flex flex-1 gap-4 overflow-x-auto p-4">
+    <div className="flex h-full gap-4 overflow-x-auto p-4">
       {COLUMNS.map((col) => {
         const colIssues = issues.filter((i) => i.status === col.status);
         return (
