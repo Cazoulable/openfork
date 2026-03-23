@@ -314,11 +314,19 @@ interface SearchResult {
 // MessagingLayout
 // ---------------------------------------------------------------------------
 
+/** Build a display name for a DM group from the perspective of the current user. */
+function dmDisplayName(dm: DmGroup, currentUserId: string | undefined): string {
+  const others = dm.members.filter((m) => m.user_id !== currentUserId);
+  if (others.length === 0) return 'You';
+  return others.map((m) => m.display_name).join(' & ');
+}
+
 export function MessagingLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { slug } = useParams<{ slug: string }>();
   const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
+  const currentUserId = useAuthStore((s) => s.user?.id);
 
   // Determine active item from URL
   const pathParts = location.pathname.split('/');
@@ -398,9 +406,9 @@ export function MessagingLayout() {
         }
       }
 
-      // Filter DMs
+      // Filter DMs by member names
       for (const dm of dmGroups) {
-        const dmName = `Conversation ${dm.id.slice(0, 8)}`;
+        const dmName = dmDisplayName(dm, currentUserId);
         if (dmName.toLowerCase().includes(q)) {
           results.push({
             type: 'dm',
@@ -617,7 +625,7 @@ export function MessagingLayout() {
                     ) : (
                       dmGroups.map((dm) => {
                         const isActive = isDmRoute && activeId === dm.id;
-                        const dmName = `Conversation ${dm.id.slice(0, 8)}`;
+                        const dmName = dmDisplayName(dm, currentUserId);
                         return (
                           <button
                             key={dm.id}

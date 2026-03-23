@@ -232,10 +232,21 @@ export function DmDetailPage() {
     [currentUserId, user, userNames],
   );
 
-  // Build title from group id
+  // Build sidebar-style title (other members only)
   const buildTitle = () => {
     if (!group) return 'Direct Message';
-    return `Conversation ${group.id.slice(0, 8)}`;
+    const others = group.members.filter((m) => m.user_id !== currentUserId);
+    if (others.length === 0) return 'You';
+    return others.map((m) => m.display_name).join(' & ');
+  };
+
+  // Build header with all participants ("Bob, Charlie & you")
+  const buildParticipants = () => {
+    if (!group) return '';
+    const others = group.members.filter((m) => m.user_id !== currentUserId);
+    if (others.length === 0) return 'you';
+    const names = others.map((m) => m.display_name);
+    return names.join(', ') + ' & you';
   };
 
   // ---------------------------------------------------------------------------
@@ -267,7 +278,7 @@ export function DmDetailPage() {
       <div className="flex h-12 shrink-0 items-center border-b border-border px-4">
         <div className="flex items-center gap-2">
           <Avatar displayName={buildTitle()} size="sm" />
-          <span className="text-sm font-semibold text-text-primary">{buildTitle()}</span>
+          <span className="text-sm font-semibold text-text-primary">{buildParticipants()}</span>
         </div>
       </div>
 

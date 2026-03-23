@@ -68,9 +68,15 @@ export interface Reaction {
 
 // DMs -------------------------------------------------------------------------
 
+export interface DmGroupMember {
+  user_id: string;
+  display_name: string;
+}
+
 export interface DmGroup {
   id: string;
   created_at: string;
+  members: DmGroupMember[];
 }
 
 export interface DmMessage {

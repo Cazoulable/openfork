@@ -12,11 +12,93 @@ use uuid::Uuid;
 use crate::models::*;
 use crate::state::AppState;
 
+/// Helper: fetch members for a list of group IDs and attach them.
+async fn enrich_groups(
+    pool: &sqlx::PgPool,
+    groups: Vec<DirectMessageGroup>,
+) -> Result<Vec<DmGroupWithMembers>, (StatusCode, Json<serde_json::Value>)> {
+    if groups.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let group_ids: Vec<Uuid> = groups.iter().map(|g| g.id).collect();
+
+    let members = sqlx::query_as::<_, (Uuid, Uuid, String)>(
+        "SELECT m.group_id, m.user_id, u.display_name \
+         FROM direct_message_members m \
+         JOIN users u ON m.user_id = u.id \
+         WHERE m.group_id = ANY($1)"
+    )
+    .bind(&group_ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+    let mut result = Vec::with_capacity(groups.len());
+    for g in groups {
+        let group_members: Vec<DmGroupMember> = members
+            .iter()
+            .filter(|(gid, _, _)| *gid == g.id)
+            .map(|(_, uid, name)| DmGroupMember {
+                user_id: *uid,
+                display_name: name.clone(),
+            })
+            .collect();
+
+        result.push(DmGroupWithMembers {
+            id: g.id,
+            created_at: g.created_at,
+            members: group_members,
+        });
+    }
+
+    Ok(result)
+}
+
 pub async fn create_dm_group(
     State(state): State<Arc<AppState>>,
     user: AuthUser,
     Json(req): Json<CreateDmGroupRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    // Build the full set of members (current user + requested users)
+    let mut all_members: Vec<Uuid> = vec![user.0.sub];
+    for uid in &req.user_ids {
+        if *uid != user.0.sub {
+            all_members.push(*uid);
+        }
+    }
+    all_members.sort();
+    let member_count = all_members.len() as i64;
+
+    // Check if a group with exactly these members already exists
+    let existing = sqlx::query_scalar::<_, Uuid>(
+        "SELECT m.group_id FROM direct_message_members m \
+         WHERE m.user_id = ANY($1) \
+         GROUP BY m.group_id \
+         HAVING COUNT(*) = $2 \
+         AND COUNT(*) = (SELECT COUNT(*) FROM direct_message_members WHERE group_id = m.group_id)"
+    )
+    .bind(&all_members)
+    .bind(member_count)
+    .fetch_optional(state.db.pool())
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+    if let Some(existing_id) = existing {
+        // Return the existing group with members
+        let group = sqlx::query_as::<_, DirectMessageGroup>(
+            "SELECT * FROM direct_message_groups WHERE id = $1"
+        )
+        .bind(existing_id)
+        .fetch_one(state.db.pool())
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+        let enriched = enrich_groups(state.db.pool(), vec![group]).await?;
+        return Ok((StatusCode::OK, Json(enriched.into_iter().next().unwrap())));
+    }
+
+    // Create new group
     let id = Uuid::new_v4();
 
     let mut tx = state.db.pool().begin().await
@@ -30,16 +112,7 @@ pub async fn create_dm_group(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
-    // Add current user
-    sqlx::query("INSERT INTO direct_message_members (group_id, user_id) VALUES ($1, $2)")
-        .bind(id)
-        .bind(user.0.sub)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    // Add other users
-    for uid in &req.user_ids {
+    for uid in &all_members {
         sqlx::query("INSERT INTO direct_message_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
             .bind(id)
             .bind(uid)
@@ -51,13 +124,14 @@ pub async fn create_dm_group(
     tx.commit().await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
-    Ok((StatusCode::CREATED, Json(group)))
+    let enriched = enrich_groups(state.db.pool(), vec![group]).await?;
+    Ok((StatusCode::CREATED, Json(enriched.into_iter().next().unwrap())))
 }
 
 pub async fn list_dm_groups(
     State(state): State<Arc<AppState>>,
     user: AuthUser,
-) -> Result<Json<Vec<DirectMessageGroup>>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<Vec<DmGroupWithMembers>>, (StatusCode, Json<serde_json::Value>)> {
     let groups = sqlx::query_as::<_, DirectMessageGroup>(
         "SELECT g.* FROM direct_message_groups g \
          JOIN direct_message_members m ON g.id = m.group_id \
@@ -68,7 +142,7 @@ pub async fn list_dm_groups(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
-    Ok(Json(groups))
+    enrich_groups(state.db.pool(), groups).await.map(Json)
 }
 
 pub async fn send_dm(

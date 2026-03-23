@@ -51,6 +51,21 @@ pub struct DirectMessageGroup {
     pub created_at: DateTime<Utc>,
 }
 
+/// A DM group member (user_id + display_name).
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct DmGroupMember {
+    pub user_id: Uuid,
+    pub display_name: String,
+}
+
+/// DM group with its member list — returned by list/create endpoints.
+#[derive(Debug, Clone, Serialize)]
+pub struct DmGroupWithMembers {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub members: Vec<DmGroupMember>,
+}
+
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct DirectMessage {
     pub id: Uuid,
