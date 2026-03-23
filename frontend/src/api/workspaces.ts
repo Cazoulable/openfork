@@ -111,6 +111,13 @@ export async function getWorkspace(
   return unwrap<WorkspaceWithRole>(res);
 }
 
+export async function getWorkspaceBySlug(
+  slug: string,
+): Promise<WorkspaceWithRole> {
+  const res = await apiFetch(`/api/workspaces/by-slug/${encodeURIComponent(slug)}`);
+  return unwrap<WorkspaceWithRole>(res);
+}
+
 export async function updateWorkspace(
   workspaceId: string,
   payload: UpdateWorkspacePayload,

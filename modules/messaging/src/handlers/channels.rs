@@ -35,7 +35,13 @@ pub async fn create_channel(
     .bind(req.workspace_id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+    .map_err(|e| {
+        if e.to_string().contains("duplicate key") {
+            (StatusCode::CONFLICT, Json(json!({"error": "a channel with this name already exists in this workspace"})))
+        } else {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    })?;
 
     // Auto-join creator
     sqlx::query("INSERT INTO channel_members (channel_id, user_id) VALUES ($1, $2)")

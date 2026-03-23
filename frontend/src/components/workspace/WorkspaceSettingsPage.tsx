@@ -288,7 +288,7 @@ export function WorkspaceSettingsPage() {
   if (!currentWorkspace) {
     return (
       <div className="flex flex-1 flex-col">
-        <TopBar title="Workspace Settings" />
+        <TopBar title="Admin" />
         <div className="flex flex-1 items-center justify-center">
           <p className="text-sm text-text-muted">No workspace selected.</p>
         </div>
@@ -301,7 +301,7 @@ export function WorkspaceSettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <TopBar title="Workspace Settings" />
+      <TopBar title="Admin" />
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-2xl space-y-8">

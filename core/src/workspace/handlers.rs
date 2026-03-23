@@ -32,11 +32,47 @@ pub struct WorkspaceState {
     pub db: RelationalStore,
 }
 
+pub async fn get_workspace_by_slug(
+    State(state): State<Arc<WorkspaceState>>,
+    user: AuthUser,
+    Path(slug): Path<String>,
+) -> Result<Json<WorkspaceWithRole>, (StatusCode, Json<serde_json::Value>)> {
+    let row = sqlx::query_as::<_, WorkspaceMemberRow>(
+        "SELECT w.id, w.name, w.slug, w.created_at, w.updated_at, wm.role \
+         FROM workspaces w \
+         JOIN workspace_members wm ON w.id = wm.workspace_id \
+         WHERE w.slug = $1 AND wm.user_id = $2"
+    )
+    .bind(&slug)
+    .bind(user.0.sub)
+    .fetch_optional(state.db.pool())
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+    match row {
+        Some(r) => Ok(Json(WorkspaceWithRole {
+            workspace: Workspace {
+                id: r.id,
+                name: r.name,
+                slug: r.slug,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+            },
+            role: r.role,
+        })),
+        None => Err((StatusCode::NOT_FOUND, Json(json!({"error": "workspace not found or access denied"})))),
+    }
+}
+
 pub async fn create_workspace(
     State(state): State<Arc<WorkspaceState>>,
     user: AuthUser,
     Json(req): Json<CreateWorkspaceRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    if super::models::RESERVED_SLUGS.contains(&req.slug.to_lowercase().as_str()) {
+        return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("'{}' is a reserved workspace name", req.slug)}))));
+    }
+
     let id = Uuid::new_v4();
 
     let mut tx = state.db.pool().begin().await

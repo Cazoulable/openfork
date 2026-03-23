@@ -4,10 +4,10 @@
 // ---------------------------------------------------------------------------
 
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { setTokens, clearTokens } from "../api/client";
 import * as authApi from "../api/auth";
 import { useAuthStore } from "../stores/auth";
+import { useWorkspaceStore } from "../stores/workspace";
 import type { AuthUser } from "../stores/auth";
 
 export interface UseAuthReturn {
@@ -30,7 +30,7 @@ export function useAuth(): UseAuthReturn {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setUser = useAuthStore((s) => s.setUser);
   const storeLogout = useAuthStore((s) => s.logout);
-  const navigate = useNavigate();
+  const clearWorkspace = useWorkspaceStore((s) => s.clearWorkspace);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,8 +74,9 @@ export function useAuth(): UseAuthReturn {
   const logout = useCallback(() => {
     clearTokens();
     storeLogout();
-    navigate("/login");
-  }, [storeLogout, navigate]);
+    clearWorkspace();
+    // No navigation — the current route's guard will show the login form
+  }, [storeLogout, clearWorkspace]);
 
   return {
     user,

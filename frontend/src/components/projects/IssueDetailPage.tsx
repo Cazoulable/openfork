@@ -6,7 +6,6 @@ import {
   AlertCircle,
   Send,
   Calendar,
-  User,
   Tag,
   ArrowLeft,
 } from 'lucide-react';
@@ -30,10 +29,14 @@ import {
   type Issue,
   type IssueStatus,
   type IssuePriority,
+  type IssueType,
+  type IssueEstimate,
   type Comment,
   type Label,
 } from '../../api/projects';
+import { listMembers, type WorkspaceMemberInfo } from '../../api/workspaces';
 import { useAuthStore } from '../../stores/auth';
+import { useWorkspaceStore } from '../../stores/workspace';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,11 +70,14 @@ export function IssueDetailPage() {
   const { id: issueId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
+  const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
+  const wsId = useWorkspaceStore((s) => s.currentWorkspace?.id);
 
   // Data state
   const [issue, setIssue] = useState<Issue | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [projectLabels, setProjectLabels] = useState<Label[]>([]);
+  const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
   const [issueLabelsIds, setIssueLabelsIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,6 +92,10 @@ export function IssueDetailPage() {
   const [editDesc, setEditDesc] = useState('');
   const [editStatus, setEditStatus] = useState<IssueStatus>('todo');
   const [editPriority, setEditPriority] = useState<IssuePriority>('none');
+  const [editType, setEditType] = useState<IssueType>('task');
+  const [editEstimate, setEditEstimate] = useState<IssueEstimate>('none');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editAssignee, setEditAssignee] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -117,13 +127,15 @@ export function IssueDetailPage() {
         if (cancelled) return;
         setIssue(issueData);
         // Load comments and labels
-        const [commentsData, labelsData] = await Promise.all([
+        const [commentsData, labelsData, membersData] = await Promise.all([
           listComments(issueData.id),
           listLabels(issueData.project_id),
+          wsId ? listMembers(wsId).catch(() => [] as WorkspaceMemberInfo[]) : Promise.resolve([] as WorkspaceMemberInfo[]),
         ]);
         if (cancelled) return;
         setComments(commentsData);
         setProjectLabels(labelsData);
+        setMembers(membersData);
         setLoading(false);
       } catch (err) {
         if (!cancelled) {
@@ -134,7 +146,7 @@ export function IssueDetailPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [issueId]);
+  }, [issueId, wsId]);
 
   // Open edit modal with current values
   const openEditModal = () => {
@@ -143,6 +155,10 @@ export function IssueDetailPage() {
     setEditDesc(issue.description ?? '');
     setEditStatus(issue.status);
     setEditPriority(issue.priority);
+    setEditType(issue.issue_type);
+    setEditEstimate(issue.estimate);
+    setEditDueDate(issue.due_date ?? '');
+    setEditAssignee(issue.assignee_id ?? '');
     setEditError('');
     setShowEditIssue(true);
   };
@@ -159,6 +175,10 @@ export function IssueDetailPage() {
         description: editDesc.trim(),
         status: editStatus,
         priority: editPriority,
+        issue_type: editType,
+        estimate: editEstimate,
+        due_date: editDueDate || undefined,
+        assignee_id: editAssignee || undefined,
       });
       setIssue(updated);
       setShowEditIssue(false);
@@ -175,7 +195,7 @@ export function IssueDetailPage() {
     setDeleting(true);
     try {
       await deleteIssue(issue.id);
-      navigate(`/projects/${projectId}`);
+      navigate(`/${wsSlug}/projects/${projectId}`);
     } catch {
       setDeleting(false);
     }
@@ -217,6 +237,38 @@ export function IssueDetailPage() {
     } catch {
       // ignore
     }
+  };
+
+  const handleTypeChange = async (issue_type: IssueType) => {
+    if (!issue) return;
+    try {
+      const updated = await updateIssue(issue.id, { issue_type });
+      setIssue(updated);
+    } catch { /* ignore */ }
+  };
+
+  const handleEstimateChange = async (estimate: IssueEstimate) => {
+    if (!issue) return;
+    try {
+      const updated = await updateIssue(issue.id, { estimate });
+      setIssue(updated);
+    } catch { /* ignore */ }
+  };
+
+  const handleAssigneeChange = async (assignee_id: string) => {
+    if (!issue) return;
+    try {
+      const updated = await updateIssue(issue.id, { assignee_id: assignee_id || undefined });
+      setIssue(updated);
+    } catch { /* ignore */ }
+  };
+
+  const handleDueDateChange = async (due_date: string) => {
+    if (!issue) return;
+    try {
+      const updated = await updateIssue(issue.id, { due_date: due_date || undefined });
+      setIssue(updated);
+    } catch { /* ignore */ }
   };
 
   // Labels modal
@@ -295,7 +347,7 @@ export function IssueDetailPage() {
           size="sm"
           variant="ghost"
           icon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() => navigate(`/projects/${issue.project_id}`)}
+          onClick={() => navigate(`/${wsSlug}/projects/${issue.project_id}`)}
         >
           Back
         </Button>
@@ -318,6 +370,8 @@ export function IssueDetailPage() {
             <div className="flex items-center gap-3">
               <StatusBadge status={issue.status} />
               <PriorityBadge priority={issue.priority} />
+              <Badge>{issue.issue_type}</Badge>
+              {issue.estimate !== 'none' && <Badge>{issue.estimate.toUpperCase()}</Badge>}
               <span className="text-xs font-mono text-text-muted">{issue.issue_number}</span>
             </div>
             {issue.description && (
@@ -411,17 +465,59 @@ export function IssueDetailPage() {
               </Select>
             </div>
 
+            {/* Type */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Type</span>
+              <Select
+                value={issue.issue_type}
+                onChange={(e) => handleTypeChange(e.target.value as IssueType)}
+              >
+                <option value="task">Task</option>
+                <option value="bug">Bug</option>
+                <option value="feature">Feature</option>
+                <option value="improvement">Improvement</option>
+              </Select>
+            </div>
+
+            {/* Estimate */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Estimate</span>
+              <Select
+                value={issue.estimate}
+                onChange={(e) => handleEstimateChange(e.target.value as IssueEstimate)}
+              >
+                <option value="none">No Estimate</option>
+                <option value="xs">XS</option>
+                <option value="s">S</option>
+                <option value="m">M</option>
+                <option value="l">L</option>
+                <option value="xl">XL</option>
+              </Select>
+            </div>
+
             {/* Assignee */}
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Assignee</span>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-tertiary px-3 py-2">
-                <User className="h-4 w-4 text-text-muted" />
-                <span className="text-sm text-text-secondary">
-                  {issue.assignee_id
-                    ? (issue.assignee_id === currentUser?.id ? currentUser.display_name : `User ${issue.assignee_id.slice(0, 6)}`)
-                    : 'Unassigned'}
-                </span>
-              </div>
+              <Select
+                value={issue.assignee_id ?? ''}
+                onChange={(e) => handleAssigneeChange(e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Due Date */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Due Date</span>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-text-primary transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                value={issue.due_date ?? ''}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+              />
             </div>
 
             {/* Labels */}
@@ -522,6 +618,39 @@ export function IssueDetailPage() {
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Type" value={editType} onChange={(e) => setEditType(e.target.value as IssueType)}>
+              <option value="task">Task</option>
+              <option value="bug">Bug</option>
+              <option value="feature">Feature</option>
+              <option value="improvement">Improvement</option>
+            </Select>
+            <Select label="Estimate" value={editEstimate} onChange={(e) => setEditEstimate(e.target.value as IssueEstimate)}>
+              <option value="none">No Estimate</option>
+              <option value="xs">XS</option>
+              <option value="s">S</option>
+              <option value="m">M</option>
+              <option value="l">L</option>
+              <option value="xl">XL</option>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-secondary">Due Date</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-text-primary transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+              />
+            </div>
+            <Select label="Assignee" value={editAssignee} onChange={(e) => setEditAssignee(e.target.value)}>
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+              ))}
             </Select>
           </div>
           {editError && <p className="text-sm text-danger">{editError}</p>}

@@ -78,6 +78,55 @@ export async function login(
   return res.json() as Promise<AuthResponse>;
 }
 
+// ---------------------------------------------------------------------------
+// Register with workspace (atomic user + workspace creation)
+// ---------------------------------------------------------------------------
+
+export interface RegisterWithWorkspacePayload {
+  email: string;
+  display_name: string;
+  password: string;
+  workspace_name: string;
+  workspace_slug: string;
+}
+
+export interface RegisterWithWorkspaceResponse extends AuthResponse {
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    created_at: string;
+    updated_at: string;
+    role: string;
+  };
+}
+
+/**
+ * Register a new user and create a workspace atomically.
+ *
+ * POST /auth/register-with-workspace
+ */
+export async function registerWithWorkspace(
+  payload: RegisterWithWorkspacePayload,
+): Promise<RegisterWithWorkspaceResponse> {
+  const res = await apiFetch("/auth/register-with-workspace", {
+    method: "POST",
+    noAuth: true,
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(
+      (err as { error?: string; message?: string }).error ??
+        (err as { message?: string }).message ??
+        "Registration failed",
+    );
+  }
+
+  return res.json() as Promise<RegisterWithWorkspaceResponse>;
+}
+
 /**
  * Obtain a new access token using a refresh token.
  *

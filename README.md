@@ -47,8 +47,8 @@ Teams juggle dozens of SaaS tools — Slack, Linear, Notion, and more — each w
 
 | Module | Description | Status |
 |--------|-------------|--------|
-| **Project Tracking** | Workspaces, projects, issues, labels, comments | MVP complete |
-| **Messaging** | Channels, DMs, threads, reactions, WebSocket, presence, full-text search | MVP complete |
+| **Tasks** | Projects, issues, labels, comments | MVP complete |
+| **Chat** | Channels, DMs, threads, reactions, WebSocket, presence, full-text search | MVP complete |
 
 ## Tech Stack
 
@@ -101,9 +101,35 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000** to access the app. Register a user and start using OpenFork.
-
 The Vite dev server on port 3000 proxies all API calls (`/auth/*`, `/api/*`) to the Rust backend on port 8080.
+
+### Development workspaces
+
+Two workspaces are seeded automatically on first run. Seed data is defined in `seeds/*.yaml`.
+
+#### Sandbox — active workspace with realistic data
+
+Pre-populated with channels, messages, threads, reactions, DMs, projects, issues, labels, and comments.
+
+| Role | Email | Password |
+|------|-------|----------|
+| Owner | `owner@gmail.com` | `owner123` |
+| Member | `member1@gmail.com` | `member1_123` |
+| Member | `member2@gmail.com` | `member2_123` |
+
+URL: **http://localhost:3000/sandbox**
+
+#### Zero — empty workspace
+
+A blank workspace with only an owner account. Shows what a fresh workspace looks like.
+
+| Role | Email | Password |
+|------|-------|----------|
+| Owner | `zero@gmail.com` | `zero_owner` |
+
+URL: **http://localhost:3000/zero**
+
+To create a new workspace from scratch, go to **http://localhost:3000/new**.
 
 ### Troubleshooting
 

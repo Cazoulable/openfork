@@ -9,6 +9,7 @@ pub fn workspace_routes(state: Arc<WorkspaceState>) -> Router {
     Router::new()
         .route("/api/workspaces", post(handlers::create_workspace))
         .route("/api/workspaces", get(handlers::list_my_workspaces))
+        .route("/api/workspaces/by-slug/{slug}", get(handlers::get_workspace_by_slug))
         .route("/api/workspaces/{id}", get(handlers::get_workspace))
         .route("/api/workspaces/{id}", put(handlers::update_workspace))
         .route("/api/workspaces/{id}/members", get(handlers::list_members))

@@ -34,6 +34,15 @@ pub struct AuthResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct RegisterWithWorkspaceRequest {
+    pub email: String,
+    pub display_name: String,
+    pub password: String,
+    pub workspace_name: String,
+    pub workspace_slug: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct RefreshRequest {
     pub refresh_token: String,
 }

@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { StatusBadge, PriorityBadge } from '../ui/Badge';
 import { Avatar } from '../ui/Avatar';
-import type { Issue } from '../../api/projects';
+import { Bug, Lightbulb, Wrench, CheckSquare } from 'lucide-react';
+import type { Issue, IssueType } from '../../api/projects';
+import { useWorkspaceStore } from '../../stores/workspace';
 
 interface IssueRowProps {
   issue: Issue;
@@ -16,16 +18,29 @@ function formatDate(iso: string): string {
   });
 }
 
+const TYPE_ICONS: Record<IssueType, React.ReactNode> = {
+  task: <CheckSquare className="h-3.5 w-3.5 text-text-muted" />,
+  bug: <Bug className="h-3.5 w-3.5 text-danger" />,
+  feature: <Lightbulb className="h-3.5 w-3.5 text-warning" />,
+  improvement: <Wrench className="h-3.5 w-3.5 text-accent" />,
+};
+
 export function IssueRow({ issue, userNames }: IssueRowProps) {
   const navigate = useNavigate();
+  const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
   const assigneeName = issue.assignee_id && userNames?.[issue.assignee_id];
 
   return (
     <button
       type="button"
-      onClick={() => navigate(`/issues/${issue.id}`)}
+      onClick={() => navigate(`/${wsSlug}/issues/${issue.id}`)}
       className="group flex w-full items-center gap-4 border-b border-border px-5 py-3 text-left transition-colors duration-100 hover:bg-bg-hover cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
     >
+      {/* Type icon */}
+      <div className="w-6 shrink-0 flex justify-center" title={issue.issue_type}>
+        {TYPE_ICONS[issue.issue_type]}
+      </div>
+
       {/* Identifier */}
       <span className="w-24 shrink-0 text-xs font-mono text-text-muted">
         {issue.issue_number}

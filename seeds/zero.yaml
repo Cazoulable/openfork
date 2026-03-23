@@ -1,0 +1,16 @@
+# =============================================================================
+# Zero workspace seed data
+#
+# A completely empty workspace — shows what a blank slate looks like.
+# Only the workspace and its owner exist; no channels, projects, or data.
+# =============================================================================
+
+workspace:
+  name: Zero
+  slug: zero
+
+users:
+  - email: zero@gmail.com
+    display_name: Zero Admin
+    password: zero_owner
+    role: owner

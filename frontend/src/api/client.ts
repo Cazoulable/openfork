@@ -63,7 +63,7 @@ let refreshInFlight: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
   if (!refreshToken) {
     clearTokens();
-    window.location.href = "/login";
+    window.location.reload();
     return false;
   }
 
@@ -76,7 +76,7 @@ async function tryRefresh(): Promise<boolean> {
 
     if (!res.ok) {
       clearTokens();
-      window.location.href = "/login";
+      window.location.reload();
       return false;
     }
 
@@ -88,7 +88,7 @@ async function tryRefresh(): Promise<boolean> {
     return true;
   } catch {
     clearTokens();
-    window.location.href = "/login";
+    window.location.reload();
     return false;
   }
 }
@@ -108,7 +108,7 @@ export interface ApiFetchOptions extends Omit<RequestInit, "headers"> {
  * 1. Prefixes `path` with the API base URL.
  * 2. Attaches the `Authorization: Bearer …` header when a token is available.
  * 3. On a 401, transparently refreshes the access token and retries once.
- * 4. If the refresh itself fails, clears tokens and redirects to /login.
+ * 4. If the refresh itself fails, clears tokens and reloads the page.
  *
  * Returns the raw `Response` so callers can parse JSON, stream, etc.
  */

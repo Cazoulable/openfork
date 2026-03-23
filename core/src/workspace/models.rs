@@ -2,6 +2,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Workspace slugs that conflict with top-level routes and cannot be used.
+pub const RESERVED_SLUGS: &[&str] = &[
+    "new", "join", "api", "auth", "admin", "settings",
+];
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "workspace_role", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]

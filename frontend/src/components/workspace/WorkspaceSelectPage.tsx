@@ -70,7 +70,7 @@ export function WorkspaceSelectPage() {
 
   const handleSelect = (ws: WorkspaceWithRole) => {
     setWorkspace(ws);
-    navigate('/projects');
+    navigate(`/${ws.slug}/projects`);
   };
 
   const handleWsNameChange = (val: string) => {
@@ -94,7 +94,7 @@ export function WorkspaceSelectPage() {
         slug: wsSlug.trim(),
       });
       setWorkspace(ws);
-      navigate('/projects');
+      navigate(`/${ws.slug}/projects`);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create workspace');
     } finally {

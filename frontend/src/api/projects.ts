@@ -36,6 +36,8 @@ export interface UpdateProjectPayload {
 
 export type IssueStatus = "backlog" | "todo" | "in_progress" | "done" | "cancelled";
 export type IssuePriority = "none" | "low" | "medium" | "high" | "urgent";
+export type IssueType = "task" | "bug" | "feature" | "improvement";
+export type IssueEstimate = "none" | "xs" | "s" | "m" | "l" | "xl";
 
 export interface Issue {
   id: string;
@@ -44,6 +46,9 @@ export interface Issue {
   description: string | null;
   status: IssueStatus;
   priority: IssuePriority;
+  issue_type: IssueType;
+  estimate: IssueEstimate;
+  due_date: string | null;
   assignee_id: string | null;
   creator_id: string;
   issue_number: number;
@@ -57,6 +62,9 @@ export interface CreateIssuePayload {
   status?: IssueStatus;
   priority?: IssuePriority;
   assignee_id?: string;
+  issue_type?: IssueType;
+  estimate?: IssueEstimate;
+  due_date?: string;
 }
 
 export interface UpdateIssuePayload {
@@ -65,12 +73,17 @@ export interface UpdateIssuePayload {
   status?: IssueStatus;
   priority?: IssuePriority;
   assignee_id?: string | null;
+  issue_type?: IssueType;
+  estimate?: IssueEstimate;
+  due_date?: string | null;
 }
 
 export interface ListIssuesFilters {
   status?: IssueStatus;
   priority?: IssuePriority;
   assignee_id?: string;
+  issue_type?: IssueType;
+  estimate?: IssueEstimate;
 }
 
 // Comment ---------------------------------------------------------------------
@@ -186,6 +199,8 @@ export async function listIssues(
   if (filters?.status) params.set("status", filters.status);
   if (filters?.priority) params.set("priority", filters.priority);
   if (filters?.assignee_id) params.set("assignee_id", filters.assignee_id);
+  if (filters?.issue_type) params.set("issue_type", filters.issue_type);
+  if (filters?.estimate) params.set("estimate", filters.estimate);
 
   const qs = params.toString();
   const path = `/api/projects/${projectId}/issues${qs ? `?${qs}` : ""}`;

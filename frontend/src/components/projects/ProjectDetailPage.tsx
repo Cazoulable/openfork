@@ -8,8 +8,11 @@ import {
   ListFilter,
   AlertCircle,
   CircleDot,
+  LayoutList,
+  LayoutGrid,
 } from 'lucide-react';
 import { TopBar } from '../layout/TopBar';
+import { useWorkspaceStore } from '../../stores/workspace';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -30,9 +33,13 @@ import {
   type Issue,
   type IssueStatus,
   type IssuePriority,
+  type IssueType,
+  type IssueEstimate,
   type ListIssuesFilters,
   type Label,
 } from '../../api/projects';
+import { listMembers, type WorkspaceMemberInfo } from '../../api/workspaces';
+import { useAuthStore } from '../../stores/auth';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -56,6 +63,14 @@ const PRIORITY_OPTIONS: { value: IssuePriority | ''; label: string }[] = [
   { value: 'urgent', label: 'Urgent' },
 ];
 
+const TYPE_OPTIONS: { value: IssueType | ''; label: string }[] = [
+  { value: '', label: 'All types' },
+  { value: 'task', label: 'Task' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'feature', label: 'Feature' },
+  { value: 'improvement', label: 'Improvement' },
+];
+
 const LABEL_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
   '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6',
@@ -68,11 +83,14 @@ const LABEL_COLORS = [
 export function ProjectDetailPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
+  const currentUser = useAuthStore((s) => s.user);
 
   // Data state
   const [project, setProject] = useState<Project | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
+  const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [error, setError] = useState('');
@@ -80,6 +98,11 @@ export function ProjectDetailPage() {
   // Filters
   const [filterStatus, setFilterStatus] = useState<IssueStatus | ''>('');
   const [filterPriority, setFilterPriority] = useState<IssuePriority | ''>('');
+  const [filterType, setFilterType] = useState<IssueType | ''>('');
+  const [filterAssignee, setFilterAssignee] = useState('');
+
+  // View mode
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
 
   // Modals
   const [showEditProject, setShowEditProject] = useState(false);
@@ -101,6 +124,10 @@ export function ProjectDetailPage() {
   const [issueDesc, setIssueDesc] = useState('');
   const [issueStatus, setIssueStatus] = useState<IssueStatus>('todo');
   const [issuePriority, setIssuePriority] = useState<IssuePriority>('none');
+  const [issueType, setIssueType] = useState<IssueType>('task');
+  const [issueEstimate, setIssueEstimate] = useState<IssueEstimate>('none');
+  const [issueDueDate, setIssueDueDate] = useState('');
+  const [issueAssignee, setIssueAssignee] = useState('');
   const [issueCreating, setIssueCreating] = useState(false);
   const [issueError, setIssueError] = useState('');
 
@@ -150,14 +177,22 @@ export function ProjectDetailPage() {
     const filters: ListIssuesFilters = {};
     if (filterStatus) filters.status = filterStatus;
     if (filterPriority) filters.priority = filterPriority;
+    if (filterType) filters.issue_type = filterType;
+    if (filterAssignee) filters.assignee_id = filterAssignee;
     fetchIssues(filters);
-  }, [projectId, loading, filterStatus, filterPriority, fetchIssues]);
+  }, [projectId, loading, filterStatus, filterPriority, filterType, filterAssignee, fetchIssues]);
 
-  // Fetch labels
+  // Fetch labels and members
   useEffect(() => {
-    if (!projectId || loading) return;
-    listLabels(projectId).then(setLabels).catch(() => setLabels([]));
-  }, [projectId, loading]);
+    if (!projectId || loading || !project) return;
+    Promise.all([
+      listLabels(projectId).catch(() => [] as Label[]),
+      project.workspace_id ? listMembers(project.workspace_id).catch(() => [] as WorkspaceMemberInfo[]) : Promise.resolve([] as WorkspaceMemberInfo[]),
+    ]).then(([labelsData, membersData]) => {
+      setLabels(labelsData);
+      setMembers(membersData);
+    });
+  }, [projectId, loading, project]);
 
   // Edit project handler
   const handleEditProject = async (e: FormEvent) => {
@@ -185,7 +220,7 @@ export function ProjectDetailPage() {
     setDeleting(true);
     try {
       await deleteProject(project.id);
-      navigate('/projects');
+      navigate(`/${wsSlug}/projects`);
     } catch {
       setDeleting(false);
     }
@@ -203,6 +238,10 @@ export function ProjectDetailPage() {
         description: issueDesc.trim() || undefined,
         status: issueStatus,
         priority: issuePriority,
+        issue_type: issueType,
+        estimate: issueEstimate,
+        due_date: issueDueDate || undefined,
+        assignee_id: issueAssignee || undefined,
       });
       setIssues((prev) => [issue, ...prev]);
       setShowCreateIssue(false);
@@ -210,6 +249,10 @@ export function ProjectDetailPage() {
       setIssueDesc('');
       setIssueStatus('todo');
       setIssuePriority('none');
+      setIssueType('task');
+      setIssueEstimate('none');
+      setIssueDueDate('');
+      setIssueAssignee('');
     } catch (err) {
       setIssueError(err instanceof Error ? err.message : 'Failed to create issue');
     } finally {
@@ -246,6 +289,14 @@ export function ProjectDetailPage() {
     setShowEditProject(true);
   };
 
+  // Update an issue in-place (for kanban board later)
+  const handleIssueUpdated = (updated: Issue) => {
+    setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+  };
+
+  // Build userNames map
+  const userNames = Object.fromEntries(members.map((m) => [m.user_id, m.display_name]));
+
   // Loading state
   if (loading) {
     return (
@@ -268,7 +319,7 @@ export function ProjectDetailPage() {
           title="Could not load project"
           description={error || 'Project not found.'}
           action={
-            <Button size="sm" variant="secondary" onClick={() => navigate('/projects')}>
+            <Button size="sm" variant="secondary" onClick={() => navigate(`/${wsSlug}/projects`)}>
               Back to Projects
             </Button>
           }
@@ -322,22 +373,71 @@ export function ProjectDetailPage() {
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </Select>
-        {(filterStatus || filterPriority) && (
+        <Select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value as IssueType | '')}
+          wrapperClassName="w-36"
+        >
+          {TYPE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
+        <Select
+          value={filterAssignee}
+          onChange={(e) => setFilterAssignee(e.target.value)}
+          wrapperClassName="w-40"
+        >
+          <option value="">All assignees</option>
+          {members.map((m) => (
+            <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+          ))}
+        </Select>
+        {(filterStatus || filterPriority || filterType || filterAssignee) && (
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => { setFilterStatus(''); setFilterPriority(''); }}
+            onClick={() => {
+              setFilterStatus('');
+              setFilterPriority('');
+              setFilterType('');
+              setFilterAssignee('');
+            }}
           >
             Clear filters
           </Button>
         )}
-        <span className="ml-auto text-xs text-text-muted">
-          {issues.length} issue{issues.length !== 1 ? 's' : ''}
-        </span>
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-bg-tertiary p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`rounded-md p-1.5 transition-colors cursor-pointer ${
+                viewMode === 'list' ? 'bg-bg-primary text-text-primary shadow-sm' : 'text-text-muted hover:text-text-secondary'
+              }`}
+              title="List view"
+            >
+              <LayoutList className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('board')}
+              className={`rounded-md p-1.5 transition-colors cursor-pointer ${
+                viewMode === 'board' ? 'bg-bg-primary text-text-primary shadow-sm' : 'text-text-muted hover:text-text-secondary'
+              }`}
+              title="Board view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+          <span className="text-xs text-text-muted">
+            {issues.length} issue{issues.length !== 1 ? 's' : ''}
+          </span>
+        </div>
       </div>
 
       {/* Issue list header */}
       <div className="flex items-center gap-4 border-b border-border bg-bg-secondary/50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-text-muted">
+        <span className="w-6 shrink-0" />
         <span className="w-24 shrink-0">ID</span>
         <span className="min-w-0 flex-1">Title</span>
         <span className="shrink-0 w-24 text-center">Status</span>
@@ -366,7 +466,7 @@ export function ProjectDetailPage() {
         ) : (
           <div>
             {issues.map((issue) => (
-              <IssueRow key={issue.id} issue={issue} />
+              <IssueRow key={issue.id} issue={issue} userNames={userNames} />
             ))}
           </div>
         )}
@@ -464,6 +564,51 @@ export function ProjectDetailPage() {
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Type"
+              value={issueType}
+              onChange={(e) => setIssueType(e.target.value as IssueType)}
+            >
+              <option value="task">Task</option>
+              <option value="bug">Bug</option>
+              <option value="feature">Feature</option>
+              <option value="improvement">Improvement</option>
+            </Select>
+            <Select
+              label="Estimate"
+              value={issueEstimate}
+              onChange={(e) => setIssueEstimate(e.target.value as IssueEstimate)}
+            >
+              <option value="none">No Estimate</option>
+              <option value="xs">XS</option>
+              <option value="s">S</option>
+              <option value="m">M</option>
+              <option value="l">L</option>
+              <option value="xl">XL</option>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-secondary">Due Date</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-text-primary transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                value={issueDueDate}
+                onChange={(e) => setIssueDueDate(e.target.value)}
+              />
+            </div>
+            <Select
+              label="Assignee"
+              value={issueAssignee}
+              onChange={(e) => setIssueAssignee(e.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+              ))}
             </Select>
           </div>
           {issueError && <p className="text-sm text-danger">{issueError}</p>}

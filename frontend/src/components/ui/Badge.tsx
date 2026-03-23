@@ -90,3 +90,40 @@ export function PriorityBadge({ priority, className }: { priority: Priority; cla
     </Badge>
   );
 }
+
+// ── Type Badge ──────────────────────────────────────────────────────────────
+
+const TYPE_STYLES: Record<string, string> = {
+  task: 'bg-gray-500/10 text-gray-400',
+  bug: 'bg-red-500/10 text-red-400',
+  feature: 'bg-amber-500/10 text-amber-400',
+  improvement: 'bg-blue-500/10 text-blue-400',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  task: 'Task',
+  bug: 'Bug',
+  feature: 'Feature',
+  improvement: 'Improvement',
+};
+
+export function TypeBadge({ type }: { type: string }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_STYLES[type] ?? ''}`}>
+      {TYPE_LABELS[type] ?? type}
+    </span>
+  );
+}
+
+// ── Estimate Badge ──────────────────────────────────────────────────────────
+
+const ESTIMATE_STYLES = 'bg-purple-500/10 text-purple-400';
+
+export function EstimateBadge({ estimate }: { estimate: string }) {
+  if (estimate === 'none') return null;
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ESTIMATE_STYLES}`}>
+      {estimate.toUpperCase()}
+    </span>
+  );
+}

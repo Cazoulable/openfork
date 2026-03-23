@@ -1,0 +1,222 @@
+# =============================================================================
+# Sandbox workspace seed data
+#
+# An active workspace with realistic data across all modules.
+# This file is the source of truth — the SQL migration mirrors it.
+# =============================================================================
+
+workspace:
+  name: Sandbox
+  slug: sandbox
+
+users:
+  - email: owner@gmail.com
+    display_name: Alice Chen
+    password: owner123
+    role: owner
+
+  - email: member1@gmail.com
+    display_name: Bob Martinez
+    password: member1_123
+    role: member
+
+  - email: member2@gmail.com
+    display_name: Charlie Kim
+    password: member2_123
+    role: member
+
+# ---------------------------------------------------------------------------
+# Chat module
+# ---------------------------------------------------------------------------
+
+channels:
+  - name: general
+    slug: general
+    messages:
+      - author: owner@gmail.com
+        content: "Welcome to the Sandbox workspace! This is our main communication hub."
+        reactions:
+          - emoji: "wave"
+            users: [member1@gmail.com, member2@gmail.com]
+        replies:
+          - author: member1@gmail.com
+            content: "Hey everyone! Great to be here."
+          - author: member2@gmail.com
+            content: "Thanks for the invite! Looking forward to working together."
+
+      - author: owner@gmail.com
+        content: "Quick reminder — please use #engineering for technical discussions and #random for everything else."
+        reactions:
+          - emoji: "thumbsup"
+            users: [member1@gmail.com, member2@gmail.com]
+
+      - author: member1@gmail.com
+        content: "Has anyone looked at the new Tasks module? Pretty slick."
+        replies:
+          - author: owner@gmail.com
+            content: "Yes! I've already created a couple of projects. Check out the Tasks tab."
+          - author: member2@gmail.com
+            content: "Nice, will take a look."
+
+  - name: random
+    slug: random
+    messages:
+      - author: member2@gmail.com
+        content: "Anyone up for coffee?"
+        reactions:
+          - emoji: "coffee"
+            users: [member1@gmail.com, owner@gmail.com]
+
+      - author: member1@gmail.com
+        content: "Always! Meet in 5?"
+
+      - author: owner@gmail.com
+        content: "Count me in!"
+
+  - name: engineering
+    slug: engineering
+    messages:
+      - author: owner@gmail.com
+        content: "Let's discuss the API architecture for the new features."
+
+      - author: member1@gmail.com
+        content: "I think we should use REST for CRUD and WebSockets for real-time updates."
+
+      - author: member2@gmail.com
+        content: "Agree. I can start on the WebSocket implementation."
+        reactions:
+          - emoji: "rocket"
+            users: [member1@gmail.com]
+        replies:
+          - author: owner@gmail.com
+            content: "That would be great. Let's sync tomorrow morning."
+
+      - author: owner@gmail.com
+        content: "FYI — I've updated the database schema. Please pull latest."
+        reactions:
+          - emoji: "eyes"
+            users: [member1@gmail.com, member2@gmail.com]
+
+direct_messages:
+  - participants: [owner@gmail.com, member1@gmail.com]
+    messages:
+      - author: owner@gmail.com
+        content: "Hey Bob, can you review the PR for the auth module?"
+      - author: member1@gmail.com
+        content: "Sure, I'll take a look this afternoon."
+      - author: owner@gmail.com
+        content: "Thanks! No rush, just when you get a chance."
+
+  - participants: [member1@gmail.com, member2@gmail.com]
+    messages:
+      - author: member1@gmail.com
+        content: "Charlie, are you free to pair on the WebSocket stuff later?"
+      - author: member2@gmail.com
+        content: "Yeah, 3pm works for me."
+
+# ---------------------------------------------------------------------------
+# Tasks module
+# ---------------------------------------------------------------------------
+
+projects:
+  - name: Website Redesign
+    slug: website-redesign
+    description: "Complete overhaul of the company website with a modern design system."
+
+  - name: Mobile App
+    slug: mobile-app
+    description: "Cross-platform mobile application using React Native."
+
+labels:
+  - name: bug
+    color: "#ef4444"
+  - name: feature
+    color: "#3b82f6"
+  - name: improvement
+    color: "#8b5cf6"
+  - name: documentation
+    color: "#6b7280"
+
+issues:
+  # Website Redesign issues
+  - project: website-redesign
+    title: "Redesign homepage layout"
+    description: "Create a new responsive layout for the homepage with improved hero section."
+    status: in_progress
+    priority: high
+    assignee: owner@gmail.com
+    labels: [improvement]
+    comments:
+      - author: member1@gmail.com
+        body: "I started working on the wireframes. Should have something to show by Friday."
+      - author: owner@gmail.com
+        body: "Looking forward to it! Let me know if you need design assets."
+
+  - project: website-redesign
+    title: "Update color scheme to new brand guidelines"
+    status: done
+    priority: medium
+    assignee: member1@gmail.com
+    labels: [improvement]
+
+  - project: website-redesign
+    title: "Fix navigation dropdown on mobile"
+    description: "The dropdown menu clips off-screen on viewports narrower than 375px."
+    status: open
+    priority: high
+    assignee: member2@gmail.com
+    labels: [bug]
+
+  - project: website-redesign
+    title: "Add dark mode support"
+    description: "Implement a theme toggle that respects system preference."
+    status: open
+    priority: low
+    labels: [feature]
+
+  - project: website-redesign
+    title: "Write onboarding documentation"
+    status: done
+    priority: medium
+    assignee: owner@gmail.com
+    labels: [documentation]
+
+  # Mobile App issues
+  - project: mobile-app
+    title: "Set up React Native project structure"
+    status: done
+    priority: high
+    assignee: owner@gmail.com
+
+  - project: mobile-app
+    title: "Implement user authentication flow"
+    description: "Login, registration, and token refresh using the existing API."
+    status: in_progress
+    priority: high
+    assignee: member1@gmail.com
+    labels: [feature]
+
+  - project: mobile-app
+    title: "Design app icon and splash screen"
+    status: open
+    priority: low
+
+  - project: mobile-app
+    title: "Push notification integration"
+    description: "Support for FCM (Android) and APNs (iOS)."
+    status: open
+    priority: medium
+    labels: [feature]
+
+  - project: mobile-app
+    title: "Fix crash on login screen"
+    description: "App crashes when submitting empty credentials on iOS 17."
+    status: open
+    priority: urgent
+    assignee: member2@gmail.com
+    labels: [bug]
+    comments:
+      - author: member2@gmail.com
+        body: "Found the bug — it's a null pointer in the token validation logic."
+      - author: owner@gmail.com
+        body: "Great catch! Can you submit a PR?"

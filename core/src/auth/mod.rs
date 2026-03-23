@@ -13,6 +13,7 @@ use std::sync::Arc;
 pub fn auth_routes(state: Arc<handlers::AuthState>) -> Router {
     Router::new()
         .route("/auth/register", post(handlers::register))
+        .route("/auth/register-with-workspace", post(handlers::register_with_workspace))
         .route("/auth/login", post(handlers::login))
         .route("/auth/refresh", post(handlers::refresh))
         .with_state(state)

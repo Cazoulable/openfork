@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { FolderKanban, ChevronRight } from 'lucide-react';
 import type { Project } from '../../api/projects';
+import { useWorkspaceStore } from '../../stores/workspace';
 
 interface ProjectCardProps {
   project: Project;
@@ -16,11 +17,12 @@ function formatDate(iso: string): string {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate();
+  const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
 
   return (
     <button
       type="button"
-      onClick={() => navigate(`/projects/${project.id}`)}
+      onClick={() => navigate(`/${wsSlug}/projects/${project.id}`)}
       className="group flex flex-col gap-3 rounded-xl border border-border bg-bg-secondary p-5 text-left transition-all duration-150 hover:border-accent/40 hover:bg-bg-tertiary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       <div className="flex items-start justify-between">
