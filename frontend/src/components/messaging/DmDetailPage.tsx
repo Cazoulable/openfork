@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageSquare, ArrowLeft } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
-import { TopBar } from '../layout/TopBar';
 import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
@@ -11,6 +10,7 @@ import { MessageInput } from './MessageInput';
 import * as api from '../../api/messaging';
 import type { DmGroup, DmMessage } from '../../api/messaging';
 import { useAuthStore } from '../../stores/auth';
+import { useWorkspaceStore } from '../../stores/workspace';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -89,6 +89,7 @@ export function DmDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
   const currentUserId = user?.id || '';
 
   // Group state
@@ -227,31 +228,24 @@ export function DmDetailPage() {
 
   if (groupError || !group) {
     return (
-      <div className="flex flex-1 flex-col">
-        <TopBar title="Direct Message" />
-        <div className="flex flex-1 flex-col items-center justify-center px-6">
-          <p className="text-sm text-danger mb-3">{groupError || 'Conversation not found'}</p>
-          <Button size="sm" variant="secondary" onClick={() => navigate('/dm')}>
-            Back to Messages
-          </Button>
-        </div>
+      <div className="flex flex-1 flex-col items-center justify-center px-6">
+        <p className="text-sm text-danger mb-3">{groupError || 'Conversation not found'}</p>
+        <Button size="sm" variant="secondary" onClick={() => navigate(`/${wsSlug}/dm`)}>
+          Back to Messages
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Top bar */}
-      <TopBar title={buildTitle()}>
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() => navigate('/dm')}
-        >
-          Back
-        </Button>
-      </TopBar>
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {/* DM header bar */}
+      <div className="flex h-12 shrink-0 items-center border-b border-border px-4">
+        <div className="flex items-center gap-2">
+          <Avatar displayName={buildTitle()} size="sm" />
+          <span className="text-sm font-semibold text-text-primary">{buildTitle()}</span>
+        </div>
+      </div>
 
       {/* Messages */}
       <div

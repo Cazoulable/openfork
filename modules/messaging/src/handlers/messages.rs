@@ -51,7 +51,7 @@ pub async fn list_messages(
     let limit = params.limit.unwrap_or(50);
 
     let messages = sqlx::query_as::<_, Message>(
-        "SELECT * FROM messages WHERE channel_id = $1 AND thread_id IS NULL ORDER BY created_at DESC OFFSET $2 LIMIT $3"
+        "SELECT * FROM messages WHERE channel_id = $1 AND thread_id IS NULL ORDER BY created_at ASC OFFSET $2 LIMIT $3"
     )
     .bind(channel_id)
     .bind(offset)

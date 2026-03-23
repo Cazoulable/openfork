@@ -108,7 +108,7 @@ pub async fn list_dms(
     let limit = params.limit.unwrap_or(50);
 
     let messages = sqlx::query_as::<_, DirectMessage>(
-        "SELECT * FROM direct_messages WHERE group_id = $1 ORDER BY created_at DESC OFFSET $2 LIMIT $3"
+        "SELECT * FROM direct_messages WHERE group_id = $1 ORDER BY created_at ASC OFFSET $2 LIMIT $3"
     )
     .bind(group_id)
     .bind(offset)

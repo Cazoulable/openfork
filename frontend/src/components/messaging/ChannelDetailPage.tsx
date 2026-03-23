@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { TopBar } from '../layout/TopBar';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
@@ -20,6 +19,7 @@ import { ThreadPanel } from './ThreadPanel';
 import * as api from '../../api/messaging';
 import type { Channel, Message, Reaction } from '../../api/messaging';
 import { useAuthStore } from '../../stores/auth';
+import { useWorkspaceStore } from '../../stores/workspace';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -197,6 +197,7 @@ export function ChannelDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const wsSlug = useWorkspaceStore((s) => s.currentWorkspace?.slug);
   const currentUserId = user?.id || '';
 
   // Channel state
@@ -379,7 +380,7 @@ export function ChannelDetailPage() {
     if (!id) return;
     try {
       await api.leaveChannel(id);
-      navigate('/channels');
+      navigate(`/${wsSlug}/channels`);
     } catch (err) {
       console.error('Failed to leave channel:', err);
     }
@@ -390,7 +391,7 @@ export function ChannelDetailPage() {
     setDeleting(true);
     try {
       await api.deleteChannel(id);
-      navigate('/channels');
+      navigate(`/${wsSlug}/channels`);
     } catch (err) {
       console.error('Failed to delete channel:', err);
     } finally {
@@ -446,33 +447,34 @@ export function ChannelDetailPage() {
 
   if (channelError || !channel) {
     return (
-      <div className="flex flex-1 flex-col">
-        <TopBar title="Channel" />
-        <div className="flex flex-1 flex-col items-center justify-center px-6">
-          <p className="text-sm text-danger mb-3">{channelError || 'Channel not found'}</p>
-          <Button size="sm" variant="secondary" onClick={() => navigate('/channels')}>
-            Back to Channels
-          </Button>
-        </div>
+      <div className="flex flex-1 flex-col items-center justify-center px-6">
+        <p className="text-sm text-danger mb-3">{channelError || 'Channel not found'}</p>
+        <Button size="sm" variant="secondary" onClick={() => navigate(`/${wsSlug}/channels`)}>
+          Back to Channels
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Top bar */}
-      <TopBar title={`# ${channel.name}`}>
-        {channel.description && (
-          <span className="hidden text-xs text-text-muted lg:block max-w-xs truncate">
-            {channel.description}
-          </span>
-        )}
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Channel header bar */}
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <Hash className="h-4 w-4 shrink-0 text-text-muted" />
+          <span className="text-sm font-semibold text-text-primary truncate">{channel.name}</span>
+          {channel.description && (
+            <span className="hidden text-xs text-text-muted lg:block max-w-xs truncate ml-2">
+              {channel.description}
+            </span>
+          )}
+        </div>
         <ChannelActions
           onEdit={() => setEditModalOpen(true)}
           onLeave={handleLeave}
           onDelete={() => setDeleteModalOpen(true)}
         />
-      </TopBar>
+      </div>
 
       {/* Main content: messages + optional thread panel */}
       <div className="flex flex-1 overflow-hidden">
