@@ -21,6 +21,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Spinner } from '../ui/Spinner';
 import { Badge } from '../ui/Badge';
 import { IssueRow } from './IssueRow';
+import { KanbanBoard } from './KanbanBoard';
 import {
   getProject,
   updateProject,
@@ -435,42 +436,56 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Issue list header */}
-      <div className="flex items-center gap-4 border-b border-border bg-bg-secondary/50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-text-muted">
-        <span className="w-6 shrink-0" />
-        <span className="w-24 shrink-0">ID</span>
-        <span className="min-w-0 flex-1">Title</span>
-        <span className="shrink-0 w-24 text-center">Status</span>
-        <span className="shrink-0 w-20 text-center">Priority</span>
-        <span className="w-8 shrink-0 text-center">Assignee</span>
-        <span className="w-16 shrink-0 text-right">Date</span>
-      </div>
+      {viewMode === 'list' ? (
+        <>
+          {/* Issue list header */}
+          <div className="flex items-center gap-4 border-b border-border bg-bg-secondary/50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-text-muted">
+            <span className="w-6 shrink-0" />
+            <span className="w-24 shrink-0">ID</span>
+            <span className="min-w-0 flex-1">Title</span>
+            <span className="shrink-0 w-24 text-center">Status</span>
+            <span className="shrink-0 w-20 text-center">Priority</span>
+            <span className="w-8 shrink-0 text-center">Assignee</span>
+            <span className="w-16 shrink-0 text-right">Date</span>
+          </div>
 
-      {/* Issues */}
-      <div className="flex-1 overflow-y-auto">
-        {loadingIssues ? (
-          <div className="flex items-center justify-center py-16">
-            <Spinner size="lg" className="text-accent" />
+          {/* Issues */}
+          <div className="flex-1 overflow-y-auto">
+            {loadingIssues ? (
+              <div className="flex items-center justify-center py-16">
+                <Spinner size="lg" className="text-accent" />
+              </div>
+            ) : issues.length === 0 ? (
+              <EmptyState
+                icon={<CircleDot className="h-8 w-8" />}
+                title="No issues yet"
+                description="Create an issue to start tracking work in this project."
+                action={
+                  <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateIssue(true)}>
+                    Create Issue
+                  </Button>
+                }
+              />
+            ) : (
+              <div>
+                {issues.map((issue) => (
+                  <IssueRow key={issue.id} issue={issue} userNames={userNames} />
+                ))}
+              </div>
+            )}
           </div>
-        ) : issues.length === 0 ? (
-          <EmptyState
-            icon={<CircleDot className="h-8 w-8" />}
-            title="No issues yet"
-            description="Create an issue to start tracking work in this project."
-            action={
-              <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateIssue(true)}>
-                Create Issue
-              </Button>
-            }
-          />
-        ) : (
-          <div>
-            {issues.map((issue) => (
-              <IssueRow key={issue.id} issue={issue} userNames={userNames} />
-            ))}
-          </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          {loadingIssues ? (
+            <div className="flex items-center justify-center py-16">
+              <Spinner size="lg" className="text-accent" />
+            </div>
+          ) : (
+            <KanbanBoard issues={issues} userNames={userNames} onIssueUpdated={handleIssueUpdated} />
+          )}
+        </div>
+      )}
 
       {/* Edit Project Modal */}
       <Modal open={showEditProject} onClose={() => setShowEditProject(false)} title="Edit Project">
