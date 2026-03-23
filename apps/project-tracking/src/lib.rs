@@ -63,6 +63,10 @@ impl App for ProjectTrackingApp {
             .route("/api/projects/{project_id}/labels", post(handlers::labels::create_label))
             .route("/api/projects/{project_id}/labels", get(handlers::labels::list_labels))
             .route("/api/issues/{issue_id}/labels", put(handlers::labels::set_issue_labels))
+            // Assignees
+            .route("/api/issues/{issue_id}/assignees", get(handlers::assignees::list_issue_assignees))
+            .route("/api/issues/{issue_id}/assignees", put(handlers::assignees::set_issue_assignees))
+            .route("/api/projects/{project_id}/issue-assignees", get(handlers::assignees::list_project_issue_assignees))
             .layer(Extension(jwt))
             .with_state(state)
     }
