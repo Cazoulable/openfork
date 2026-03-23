@@ -119,17 +119,26 @@ function WorkspaceLoginForm({ slug }: { slug: string }) {
 export function WorkspaceLayout() {
   const { slug } = useParams<{ slug: string }>();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const userId = useAuthStore((s) => s.user?.id);
   const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
+  const clearWorkspace = useWorkspaceStore((s) => s.clearWorkspace);
 
   const [error, setError] = useState<string | null>(null);
+  // Track which user validated the cached workspace
+  const [validatedForUser, setValidatedForUser] = useState<string | null>(null);
 
-  const isReady = currentWorkspace?.slug === slug;
+  const isReady = currentWorkspace?.slug === slug && validatedForUser === userId;
 
-  // Reset error when slug changes
+  // Reset when slug or user changes
   useEffect(() => {
     setError(null);
-  }, [slug]);
+    // If user changed, invalidate the cached workspace
+    if (validatedForUser && validatedForUser !== userId) {
+      clearWorkspace();
+      setValidatedForUser(null);
+    }
+  }, [slug, userId, validatedForUser, clearWorkspace]);
 
   // Fetch workspace by slug when authenticated and not yet resolved
   useEffect(() => {
@@ -139,7 +148,10 @@ export function WorkspaceLayout() {
 
     getWorkspaceBySlug(slug)
       .then((ws) => {
-        if (!cancelled) setWorkspace(ws);
+        if (!cancelled) {
+          setWorkspace(ws);
+          setValidatedForUser(userId ?? null);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Workspace not found');
