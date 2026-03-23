@@ -40,6 +40,7 @@ export interface Message {
   id: string;
   channel_id: string;
   author_id: string;
+  author_name: string | null;
   thread_id: string | null;
   body: string;
   created_at: string;
@@ -76,6 +77,7 @@ export interface DmMessage {
   id: string;
   group_id: string;
   author_id: string;
+  author_name: string | null;
   body: string;
   created_at: string;
   updated_at: string;

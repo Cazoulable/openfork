@@ -79,7 +79,8 @@ pub async fn send_dm(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let id = Uuid::new_v4();
     let dm = sqlx::query_as::<_, DirectMessage>(
-        "INSERT INTO direct_messages (id, group_id, author_id, body) VALUES ($1, $2, $3, $4) RETURNING *"
+        "INSERT INTO direct_messages (id, group_id, author_id, body) VALUES ($1, $2, $3, $4) \
+         RETURNING *, (SELECT display_name FROM users WHERE id = $3) AS author_name"
     )
     .bind(id)
     .bind(group_id)
@@ -108,7 +109,10 @@ pub async fn list_dms(
     let limit = params.limit.unwrap_or(50);
 
     let messages = sqlx::query_as::<_, DirectMessage>(
-        "SELECT * FROM direct_messages WHERE group_id = $1 ORDER BY created_at ASC OFFSET $2 LIMIT $3"
+        "SELECT dm.*, u.display_name AS author_name \
+         FROM direct_messages dm LEFT JOIN users u ON dm.author_id = u.id \
+         WHERE dm.group_id = $1 \
+         ORDER BY dm.created_at ASC OFFSET $2 LIMIT $3"
     )
     .bind(group_id)
     .bind(offset)

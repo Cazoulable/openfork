@@ -223,8 +223,9 @@ export function DmDetailPage() {
   // ---------------------------------------------------------------------------
 
   const resolveName = useCallback(
-    (userId: string) => {
-      return userNames[userId]
+    (userId: string, authorName?: string | null) => {
+      return authorName
+        || userNames[userId]
         || (userId === currentUserId ? user?.display_name : undefined)
         || `User ${userId.slice(0, 8)}`;
     },
@@ -306,7 +307,7 @@ export function DmDetailPage() {
               <DmBubble
                 key={msg.id}
                 message={msg}
-                senderName={resolveName(msg.author_id)}
+                senderName={resolveName(msg.author_id, msg.author_name)}
                 isOwn={msg.author_id === currentUserId}
               />
             ))}

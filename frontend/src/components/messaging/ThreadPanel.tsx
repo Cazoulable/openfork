@@ -72,7 +72,8 @@ export function ThreadPanel({
     onMessageSent(msg);
   };
 
-  const resolveName = (userId: string) => userNames[userId] || userId.slice(0, 8);
+  const resolveName = (userId: string, authorName?: string | null) =>
+    authorName || userNames[userId] || userId.slice(0, 8);
 
   return (
     <div className="flex h-full w-96 flex-col border-l border-border bg-bg-primary">
@@ -120,7 +121,7 @@ export function ThreadPanel({
               <MessageBubble
                 key={r.id}
                 message={r}
-                senderName={resolveName(r.author_id)}
+                senderName={resolveName(r.author_id, r.author_name)}
                 reactions={allReactions[r.id] || []}
                 currentUserId={currentUserId}
                 onReact={onReact}

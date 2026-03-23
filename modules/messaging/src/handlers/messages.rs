@@ -20,7 +20,8 @@ pub async fn send_message(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let id = Uuid::new_v4();
     let message = sqlx::query_as::<_, Message>(
-        "INSERT INTO messages (id, channel_id, author_id, thread_id, body) VALUES ($1, $2, $3, $4, $5) RETURNING *"
+        "INSERT INTO messages (id, channel_id, author_id, thread_id, body) VALUES ($1, $2, $3, $4, $5) \
+         RETURNING *, (SELECT display_name FROM users WHERE id = $3) AS author_name"
     )
     .bind(id)
     .bind(channel_id)
@@ -51,7 +52,10 @@ pub async fn list_messages(
     let limit = params.limit.unwrap_or(50);
 
     let messages = sqlx::query_as::<_, Message>(
-        "SELECT * FROM messages WHERE channel_id = $1 AND thread_id IS NULL ORDER BY created_at ASC OFFSET $2 LIMIT $3"
+        "SELECT m.*, u.display_name AS author_name \
+         FROM messages m LEFT JOIN users u ON m.author_id = u.id \
+         WHERE m.channel_id = $1 AND m.thread_id IS NULL \
+         ORDER BY m.created_at ASC OFFSET $2 LIMIT $3"
     )
     .bind(channel_id)
     .bind(offset)
@@ -69,7 +73,10 @@ pub async fn get_thread(
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<Message>>, (StatusCode, Json<serde_json::Value>)> {
     let messages = sqlx::query_as::<_, Message>(
-        "SELECT * FROM messages WHERE id = $1 OR thread_id = $1 ORDER BY created_at ASC"
+        "SELECT m.*, u.display_name AS author_name \
+         FROM messages m LEFT JOIN users u ON m.author_id = u.id \
+         WHERE m.id = $1 OR m.thread_id = $1 \
+         ORDER BY m.created_at ASC"
     )
     .bind(id)
     .fetch_all(state.db.pool())
@@ -86,7 +93,8 @@ pub async fn update_message(
     Json(req): Json<UpdateMessageRequest>,
 ) -> Result<Json<Message>, (StatusCode, Json<serde_json::Value>)> {
     let message = sqlx::query_as::<_, Message>(
-        "UPDATE messages SET body = $2, updated_at = now() WHERE id = $1 AND author_id = $3 RETURNING *"
+        "UPDATE messages SET body = $2, updated_at = now() WHERE id = $1 AND author_id = $3 \
+         RETURNING *, (SELECT display_name FROM users WHERE id = $3) AS author_name"
     )
     .bind(id)
     .bind(&req.body)

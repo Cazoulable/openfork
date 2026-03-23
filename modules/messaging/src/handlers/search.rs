@@ -19,8 +19,10 @@ pub async fn search_messages(
     let limit = params.limit.unwrap_or(50);
 
     let messages = sqlx::query_as::<_, Message>(
-        "SELECT * FROM messages WHERE to_tsvector('english', body) @@ plainto_tsquery('english', $1) \
-         ORDER BY created_at DESC OFFSET $2 LIMIT $3"
+        "SELECT m.*, u.display_name AS author_name \
+         FROM messages m LEFT JOIN users u ON m.author_id = u.id \
+         WHERE to_tsvector('english', m.body) @@ plainto_tsquery('english', $1) \
+         ORDER BY m.created_at DESC OFFSET $2 LIMIT $3"
     )
     .bind(&params.q)
     .bind(offset)

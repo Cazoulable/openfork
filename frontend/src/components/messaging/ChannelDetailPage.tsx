@@ -439,8 +439,9 @@ export function ChannelDetailPage() {
   // ---------------------------------------------------------------------------
 
   const resolveName = useCallback(
-    (userId: string) => {
-      return userNames[userId]
+    (userId: string, authorName?: string | null) => {
+      return authorName
+        || userNames[userId]
         || (userId === currentUserId ? user?.display_name : undefined)
         || `User ${userId.slice(0, 8)}`;
     },
@@ -536,7 +537,7 @@ export function ChannelDetailPage() {
                   <MessageBubble
                     key={msg.id}
                     message={msg}
-                    senderName={resolveName(msg.author_id)}
+                    senderName={resolveName(msg.author_id, msg.author_name)}
                     reactions={reactions[msg.id] || []}
                     replyCount={replyCounts[msg.id] || 0}
                     currentUserId={currentUserId}
@@ -563,7 +564,7 @@ export function ChannelDetailPage() {
         {threadParent && id && (
           <ThreadPanel
             parentMessage={threadParent}
-            parentSenderName={resolveName(threadParent.author_id)}
+            parentSenderName={resolveName(threadParent.author_id, threadParent.author_name)}
             parentReactions={reactions[threadParent.id] || []}
             channelId={id}
             currentUserId={currentUserId}
